@@ -5,6 +5,8 @@ import { Player, CameraRig } from './player.js';
 import { Particles, Projectiles } from './combat.js';
 import { updateMagic } from './magic.js';
 import { SaveManager } from './save.js';
+import { Progress } from './progress.js';
+import { Guide } from './guide.js';
 import { createUI } from './ui.js';
 const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight); document.body.appendChild(renderer.domElement);
@@ -13,11 +15,12 @@ addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; cam
 const world = buildWorld(scene), player = new Player(scene), rig = new CameraRig(camera, renderer.domElement), ui = createUI(camera);
 const fx = { shake: 0, hitstop: 0 }, particles = new Particles(scene);
 const projectiles = new Projectiles(scene); world.scene = scene; world.delayed = []; world.summons = []; ui.bind(player); const saves = new SaveManager(player, ui); world.ctx = { fx, ui, particles, projectiles }; world.player = player;
+const progress = new Progress(player, world, ui, saves), guide = new Guide(player, world, ui);
 let last = performance.now();
 renderer.setAnimationLoop(now => {
   let dt = Math.min(.05, (now - last) / 1000); last = now;
   if (fx.hitstop > 0) { fx.hitstop -= dt; dt *= .05; } // hit-stop: near-freeze for a few frames
   if (ui.menu) dt = 0; // memorize screen pauses the world
-  player.update(dt, rig, world, ui, fx); world.update(dt); particles.update(dt); projectiles.update(dt, world); updateMagic(dt, world); saves.tick(dt); rig.update(dt, player, fx);
+  player.update(dt, rig, world, ui, fx); world.update(dt); particles.update(dt); projectiles.update(dt, world); updateMagic(dt, world); saves.tick(dt); progress.update(dt); guide.update(dt, rig); rig.update(dt, player, fx);
   ui.update(player, rig.target); renderer.render(scene, camera);
 });

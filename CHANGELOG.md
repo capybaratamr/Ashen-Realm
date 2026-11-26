@@ -16,3 +16,9 @@
 - Memorize screen (M) with 6 slots; spell-colored gather/impact particles
 ## Phase 5 (partial)
 - save.js: 5 localStorage slots, autosave, resume last slot, export/import save code (P menu)
+## Phase 5 (rest) + Phase 6 (core) + onboarding
+- models.js: armored knight (helmet, cape, pads, legs) and 4 distinct enemy silhouettes, with walk/roll/drink animation
+- progress.js: Ashmotes + one-shot death recovery, Crimson/Cerulean flasks (V/B, interruptible), beacons (G: rest, level up 8 stats w/ cost curve, flask upgrades, armor, fast travel), equip load tiers (Underweight/Light/Medium/Heavy/Overweight)
+- regions.js: 6 themed regions (hub, marsh, clockwork city, glass desert, frozen monastery, lantern forest) with own terrain colors/roughness, props, enemies, fog/sky; marsh water poisons
+- guide.js: lore intro, 10-step tutorial, objective (light 6 beacons), region banners, day/night cycle, HUD info panel, minimap with discovery, help screen (H)
+- Enemies patrol, flee when wounded, and stay dead until you rest; save now stores level, motes, flasks, armor, beacons, tutorial step

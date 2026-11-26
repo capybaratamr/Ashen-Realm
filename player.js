@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { heightAt, BOUND } from './world.js';
 import { Status, applyHit, COLORS } from './combat.js';
 import { SPELL_BY_ID, castSpell } from './magic.js';
+import { buildKnight } from './models.js';
+import { respawnAll, dropMotes } from './progress.js';
 import { WEAPONS, INFUSIONS, SKILLS, STAT0, weaponDamage } from './items.js';
 const K = {}, pressed = {};
 addEventListener('keydown', e => { if (!e.repeat) pressed[e.code] = true; K[e.code] = true; });
@@ -50,19 +52,28 @@ export class Player {
   constructor(scene) {
     this.pos = new THREE.Vector3(0, 0, 8); this.vel = new THREE.Vector3(); this.face = Math.PI; this.name = 'You'; this.isEnemy = false;
     this.hp = this.maxHp = 100; this.stam = this.maxStam = 100; this.regen = 0; this.poise = this.maxPoise = 35; this.poiseT = 0; this.res = {}; this.slow = 1;
-    this.status = new Status(this); this.stats = { ...STAT0 }; this.wi = 0; this.wlvl = 0; this.inf = 0; this.fp = this.maxFp = 50; this.buff = 0; this.ward = 0; this.nearSmith = false; this.slots = ['dart', 'soulspear', 'nova', 'mend', 'smite', 'familiar']; this.slot = 0; this.absorb = 0; this.absorbT = 0; this.dr = 0; this.drT = 0; this.regenT = 0; this.regenAmt = 0; this.poiseBuffT = 0; this.sp = null; this.cp = 0; this.chg = 0;
+    this.status = new Status(this); this.stats = { ...STAT0 }; this.wi = 0; this.wlvl = 0; this.inf = 0; this.fp = this.maxFp = 50; this.buff = 0; this.ward = 0; this.nearSmith = false; this.slots = ['dart', 'soulspear', 'nova', 'mend', 'smite', 'familiar']; this.slot = 0; this.absorb = 0; this.absorbT = 0; this.dr = 0; this.drT = 0; this.regenT = 0; this.regenAmt = 0; this.poiseBuffT = 0; this.sp = null; this.cp = 0; this.chg = 0; this.level = 1; this.motes = 0; this.flask = [3, 2]; this.flaskMax = [3, 2]; this.armorIdx = 2; this.spawn = new THREE.Vector3(0, 0, 8); this.lost = null; this.litBeacons = []; this.discovered = ['hollow']; this.tut = 0; this.drinkK = 0; this.armorDef = 0; this.dmgMul = 1; this.spd = 1; this.rollMul = 1; this.regenMul = 1; this.noRoll = false; this.world = null; this.ph = 0;
     this.state = 'free'; this.t = 0; this.combo = 0; this.mv = null; this.hitDone = false; this.queued = false; this.gcd = 0; this.charge = 0;
     this.iframes = false; this.onGround = true; this.plunge = false; this.dir = new THREE.Vector3(); this.dead = false;
-    this.mesh = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(.4, 1, 4, 10), new THREE.MeshStandardMaterial({ color: 0x5b6b8c })); body.position.y = .9;
-    this.arm = new THREE.Group(); this.arm.position.set(.45, 1.3, 0);
-    this.blade = new THREE.Mesh(new THREE.BoxGeometry(.08, .08, 1.3), new THREE.MeshStandardMaterial({ color: 0xcfd4dc, metalness: .8, roughness: .3 })); this.blade.position.z = .8;
-    this.arm.add(this.blade);
-    this.shield = new THREE.Mesh(new THREE.BoxGeometry(.1, .9, .7), new THREE.MeshStandardMaterial({ color: 0x8a6a3a })); this.shield.position.set(-.5, 1.2, .35); this.shield.visible = false;
-    this.mesh.add(body, this.arm, this.shield); scene.add(this.mesh);
+    const m = buildKnight(); this.mesh = m.group; this.body = m.body; this.arm = m.arm; this.blade = m.blade; this.shield = m.shield; this.legs = m.legs; this.cape = m.cape; this.torsoMat = m.torsoMat; scene.add(this.mesh);
   }
   spend(n) { if (this.stam <= 0) return false; this.stam -= n; this.regen = .8; return true; }
   forward() { return new THREE.Vector3(Math.sin(this.face), 0, Math.cos(this.face)); }
+  startDrink(k) { // flasks: V = Crimson (HP), B = Cerulean (FP). The charge is spent only when the drink finishes; a hit or a roll cancels it.
+    if (this.flask[k] <= 0) { this.ctx.ui.damage(this.pos.clone().add(UPV), 'NO FLASKS', '#ff8080'); return false; }
+    this.drinkK = k; this.state = 'drink'; this.t = 0; return true;
+  }
+  finishDrink() {
+    const k = this.drinkK; this.flask[k]--;
+    if (k === 0) { const h = Math.round(this.maxHp * .45); this.hp = Math.min(this.maxHp, this.hp + h); this.ctx.ui.damage(this.pos.clone().add(UPV), '+' + h, '#7ad13a'); }
+    else { this.fp = Math.min(this.maxFp, this.fp + this.maxFp * .4); this.ctx.ui.damage(this.pos.clone().add(UPV), 'FP restored', '#6aa0ff'); }
+    this.ctx.particles.burst(this.pos.clone().add(UPV), k ? 0x6aa0ff : 0xff6a6a, 18, 3); this.state = 'free';
+  }
+  walk(dt) { // leg / cape / body animation from ground speed
+    const sp = this.onGround ? Math.hypot(this.vel.x, this.vel.z) : 0; this.ph += dt * sp * 1.7; const k = Math.min(1, sp / 4);
+    this.legs[0].rotation.x = Math.sin(this.ph) * .8 * k; this.legs[1].rotation.x = -Math.sin(this.ph) * .8 * k;
+    this.cape.rotation.x = .15 + k * .45; this.body.rotation.x = this.state === 'roll' ? .6 : this.state === 'back' ? -.25 : 0; this.body.position.y = Math.sin(this.ph * 2) * .03 * k;
+  }
   curSpell() { return SPELL_BY_ID[this.slots[this.slot]]; }
   slotLabel() { const s = this.curSpell(); return s ? `Spell ${this.slot + 1}/6: ${s.n} (${s.fp} FP)${s.charge ? ' [hold]' : ''}${this.absorb > 0 ? ' · Ward ' + Math.round(this.absorb) : ''}<br>Z slot · T cast · M memorize` : 'Spell slot empty (M)'; }
   canCast() { const s = this.curSpell(); if (!s) return false; if (this.fp < s.fp) { this.ctx.ui.damage(this.pos.clone().add(UPV), 'NOT ENOUGH FP', '#6aa0ff'); return false; } return true; }
@@ -103,12 +114,13 @@ export class Player {
   stagger() { this.state = 'stagger'; this.t = 0; this.charge = 0; }
   onStagger() { this.stagger(); }
   takeDamage(d) {
+    d = Math.max(1, Math.round(d * (1 - this.armorDef) * this.dmgMul)); // armor + load tier
     if (this.drT > 0) d = Math.round(d * (1 - this.dr)); // Aegis Prayer
     if (this.absorb > 0) { const a = Math.min(this.absorb, d); this.absorb -= a; d -= a; if (d <= 0) return; } // Mirror Ward
     this.hp -= d;
     if (this.hp <= 0 && !this.dead) {
-      this.dead = true; const ui = this.ctx.ui; ui.msg(true);
-      setTimeout(() => { this.hp = this.maxHp; this.stam = this.maxStam; this.pos.set(0, 0, 8); this.vel.set(0, 0, 0); this.dead = false; this.state = 'free'; this.status.reset(); ui.msg(false); }, 2500);
+      this.dead = true; const ui = this.ctx.ui; ui.msg(true); dropMotes(this);
+      setTimeout(() => { this.hp = this.maxHp; this.stam = this.maxStam; this.pos.copy(this.spawn); respawnAll(this.world); this.vel.set(0, 0, 0); this.dead = false; this.state = 'free'; this.status.reset(); ui.msg(false); }, 2500);
     }
   }
   statusHurt(n, c) { this.takeDamage(n); this.ctx.ui.damage(this.pos.clone().add(UPV), n, '#' + c.toString(16).padStart(6, '0')); }
@@ -125,7 +137,7 @@ export class Player {
       if (this.stam <= 0) { this.stam = 0; this.stagger(); ctx.ui.damage(this.pos.clone().add(UPV), 'GUARD BROKEN', '#ff5050'); }
       return;
     }
-    if (this.state === 'cast') { this.state = 'free'; ctx.ui.damage(this.pos.clone().add(UPV), 'INTERRUPTED', '#ff8080'); } // hits break casting
+    if (this.state === 'cast' || this.state === 'drink') { this.state = 'free'; ctx.ui.damage(this.pos.clone().add(UPV), 'INTERRUPTED', '#ff8080'); } // hits break casting
     applyHit(this, h, ctx);
   }
   swing(world, mv, around) { // arc test in front of the player (full circle for plunge)
@@ -137,7 +149,7 @@ export class Player {
     }
   }
   update(dt, cam, world, ui, fx) {
-    this.ctx = world.ctx;
+    this.ctx = world.ctx; this.world = world;
     if (this.dead) { for (const k in pressed) delete pressed[k]; return; }
     const inp = new THREE.Vector3((K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0), 0, (K.KeyS ? 1 : 0) - (K.KeyW ? 1 : 0)), moving = inp.lengthSq() > 0;
     inp.normalize(); const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw);
@@ -151,7 +163,7 @@ export class Player {
     this.nearSmith = Math.hypot(this.pos.x - 3, this.pos.z - 5) < 4; // smith anvil: X infuse, U upgrade (free for now)
     if (this.nearSmith) { if (pressed.KeyX) this.inf = (this.inf + 1) % INFUSIONS.length; if (pressed.KeyU) this.wlvl = (this.wlvl + 1) % 11; }
     if (pressed.KeyZ) this.slot = (this.slot + 1) % this.slots.length;
-    this.absorbT -= dt; if (this.absorbT <= 0) this.absorb = 0; this.drT -= dt; this.poiseBuffT -= dt; this.maxPoise = this.poiseBuffT > 0 ? 75 : 35; if ((this.regenT -= dt) > 0) this.hp = Math.min(this.maxHp, this.hp + this.regenAmt * dt);
+    this.absorbT -= dt; if (this.absorbT <= 0) this.absorb = 0; this.drT -= dt; this.poiseBuffT -= dt; this.maxPoise = (this.poiseBuffT > 0 ? 75 : 35) + (this.armor ? this.armor.poise : 0); if ((this.regenT -= dt) > 0) this.hp = Math.min(this.maxHp, this.hp + this.regenAmt * dt);
     if ((this.poiseT -= dt) <= 0) this.poise = Math.min(this.maxPoise, this.poise + 10 * dt);
     let sprinting = false, vx = 0, vz = 0;
     const lockFace = () => { if (cam.target) this.turn(cam.target.pos.x, cam.target.pos.z, dt * 12); else if (moving) this.face += wrap(Math.atan2(wd.x, wd.z) - this.face) * Math.min(1, dt * 14); };
@@ -159,10 +171,10 @@ export class Player {
     if (this.state === 'free' || this.state === 'guard') {
       const g = this.state === 'guard', sp = !g && K.ShiftLeft && moving && this.stam > 0 && this.onGround;
       if (sp) { sprinting = true; this.stam -= 12 * dt; this.regen = .8; }
-      const speed = (g ? 2 : sp ? 7 : cam.target ? 3.6 : 4.2) * this.slow;
+      const speed = (g ? 2 : sp ? 7 : cam.target ? 3.6 : 4.2) * this.slow * this.spd;
       if (moving) { vx = wd.x * speed; vz = wd.z * speed; } lockFace();
       if (g && !K.Mouse2) { this.state = 'free'; this.gcd = .3; }
-      if (pressed.Space && this.onGround && this.spend(moving ? 20 : 12)) {
+      if (pressed.Space && this.onGround && !(this.noRoll && moving) && this.spend(moving ? 20 : 12)) {
         this.state = moving ? 'roll' : 'back'; this.t = 0; this.dir.copy(moving ? wd : this.forward().negate()); if (moving) this.face = Math.atan2(wd.x, wd.z);
       } else if (pressed.KeyF && this.onGround && this.spend(15)) { this.vel.y = 8; this.onGround = false; }
       else if (pressed.KeyC && this.onGround && this.fp >= SKILLS[this.def.skill].fp && this.spend(10)) { const s = SKILLS[this.def.skill]; this.fp -= s.fp; this.begin({ ...s.mv, skill: 1 }); } // weapon skill
@@ -171,17 +183,19 @@ export class Player {
         if (r && this.spend(10)) { this.turn(r.pos.x, r.pos.z, 1); this.begin({ wind: .2, act: .15, rec: .5, amt: 50, poise: 0, range: 3, crit: 1.9, rip: r }); } // RIPOSTE on a parried enemy
         else if (!g && !this.onGround && this.vel.y < 2 && this.spend(15)) { this.plunge = true; this.vel.y = -22; }
         else if (!g && this.onGround && this.spend(15)) { this.combo = 0; this.begin(this.def.ranged ? RANGED : MV.l0); }
+      } else if ((pressed.KeyV || pressed.KeyB) && !g && this.onGround && this.startDrink(pressed.KeyB ? 1 : 0)) {
       } else if (pressed.KeyT && !g && this.onGround && this.canCast()) { this.beginCast(); }
       else if (pressed.KeyE && !g && this.onGround && this.spend(28)) { this.state = 'charge'; this.t = 0; }
       else if (!g && K.Mouse2 && this.onGround && this.gcd <= 0) { this.state = 'guard'; this.t = 0; } // t<.3 = parry window
     } else if (this.state === 'charge') { // hold E to charge heavy, release to swing
       this.charge = Math.min(1, this.t); lockFace();
       if (!K.KeyE) this.begin({ ...MV.heavy, wind: .1, amt: MV.heavy.amt * (1 + this.charge * .9), poise: MV.heavy.poise * (1 + this.charge) });
+    } else if (this.state === 'drink') { if (moving) { vx = wd.x * 1.6; vz = wd.z * 1.6; } if (pressed.Space) this.state = 'free'; else if (this.t >= 1.1) this.finishDrink();
     } else if (this.state === 'cast') { this.castTick(dt, world, lockFace, fx);
     } else if (this.state === 'roll' || this.state === 'back') {
       const roll = this.state === 'roll', dur = roll ? .55 : .38;
-      this.iframes = this.t > .05 && this.t < (roll ? .35 : .22);
-      const sp = (roll ? 9 : 6) * (1 - this.t / dur * .5) * this.slow; vx = this.dir.x * sp; vz = this.dir.z * sp;
+      this.iframes = this.t > .05 && this.t < (roll ? .35 : .22) * Math.min(1, this.rollMul + .1); // heavier load = shorter i-frames
+      const sp = (roll ? 9 : 6) * (1 - this.t / dur * .5) * this.slow * this.rollMul; vx = this.dir.x * sp; vz = this.dir.z * sp;
       if (this.t > dur) this.state = 'free';
     } else if (this.state === 'attack') {
       const m = this.mv, t = this.t;
@@ -197,7 +211,7 @@ export class Player {
 
     // animation
     const a = this.state === 'attack' ? THREE.MathUtils.clamp((this.t - (this.mv.wind - .05)) / .25, 0, 1) : 0;
-    this.arm.rotation.x = this.state === 'attack' ? -1.3 + a * 2.2 : this.state === 'charge' ? -1.6 : -.3; this.arm.rotation.z = this.combo % 2 ? -.6 : 0;
+    this.arm.rotation.x = this.state === 'attack' ? -1.3 + a * 2.2 : this.state === 'charge' ? -1.6 : this.state === 'drink' ? -2.5 : -.3; this.arm.rotation.z = this.combo % 2 ? -.6 : 0;
     this.shield.visible = this.state === 'guard'; this.mesh.rotation.z = this.state === 'stagger' ? .25 : 0;
     this.blade.material.emissive.setHex(this.state === 'charge' ? 0x884400 : 0);
 
@@ -216,8 +230,8 @@ export class Player {
       this.pos.y = gh; this.vel.y = 0; this.onGround = true;
     } else if (this.pos.y > gh + .05) this.onGround = false;
     if (this.pos.y < -40) this.takeDamage(999);
-    if (!sprinting && this.regen <= 0 && ['free', 'roll', 'back'].includes(this.state)) this.stam = Math.min(this.maxStam, this.stam + 28 * dt * this.slow);
-    this.regen -= dt; this.mesh.position.copy(this.pos); this.mesh.rotation.y = this.face;
+    if (!sprinting && this.regen <= 0 && ['free', 'roll', 'back'].includes(this.state)) this.stam = Math.min(this.maxStam, this.stam + 28 * dt * this.slow * this.regenMul);
+    this.regen -= dt; this.walk(dt); this.mesh.position.copy(this.pos); this.mesh.rotation.y = this.face;
     for (const k in pressed) delete pressed[k];
   }
 }

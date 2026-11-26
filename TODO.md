@@ -1,9 +1,7 @@
 # TODO
-- [x] Phase 1 movement/camera
-- [x] Phase 2 combat (see CHANGELOG). Known gaps: enemies only have one attack, no enemy-vs-tree collision, melee hit arc is instant (not a true swept volume), no player poise bar in HUD
-- [x] Phase 3 weapons (see CHANGELOG). Gaps: no inventory/unlocks yet (all weapons available via 1/2), upgrades are free, skills are generic archetypes not unique per weapon, twin blades are one animation hit twice
-- [x] Phase 4 magic (see CHANGELOG). Gaps: no spell unlocks, enemies ignore summons, no audio yet
-- [~] Phase 5: save/load done (5 slots, autosave, export/import code). Remaining: flasks, runes/death drop, graces/fast travel, level-up, inventory, armor + equip load
-- [ ] Phases 6-8: 6-region world, 8 bosses, polish
-- ROADMAP (requested): original lore + codex, tutorial area, many more weapons, equip load (underweight/light/medium/heavy/overweight rolls), lighting/day-night, cutscenes (boss intros/endings), final boss (fallen astronomer), NG+, synthesized sounds + animation polish
-- Refactor: move player combat helpers fully into combat.js when weapons arrive
+- [x] Phases 1-4: movement, combat, 27 weapons, 27 spells
+- [x] Phase 5: save slots, flasks, motes + death drop, beacons, level-up, armor + equip load. Missing: inventory screen, weapon unlocks/loot, smithing stones, flask-charge items
+- [~] Phase 6 done: 6 themed regions, day/night, fog, minimap, discovery, marsh hazard, patrol/flee AI. Missing: full map screen, weather, region ambient audio, hidden areas, chests, lever shortcuts, 3+ enemy types per region (have 1-2), group AI, mount
+- [ ] Phase 7: 8 bosses (+ final: Fallen Astronomer, 3 phases), arenas, cutscenes
+- [ ] Phase 8: menus/settings/keybinds, post-processing, low-end mode, accessibility, synthesized sound effects, NG+
+- Roadmap requested: lore codex, more weapons, better animations

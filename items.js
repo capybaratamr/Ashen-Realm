@@ -1,5 +1,5 @@
 // Weapon data: categories (speed/range/poise/status), 27 weapons with stat scaling, infusions, and weapon skills.
-export const STAT0 = { str: 14, dex: 13, int: 12, fai: 12, arc: 10 };
+export const STAT0 = { vig: 10, mind: 10, end: 10, str: 14, dex: 13, int: 12, fai: 12, arc: 10 };
 // speed = animation multiplier, rng = reach multiplier, arc = min facing dot (spear is narrow), poise = poise-damage multiplier
 export const CAT = {
   sword: { speed: 1, rng: 1, arc: .3, poise: 1 }, great: { speed: .7, rng: 1.2, arc: .3, poise: 1.8 },
