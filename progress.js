@@ -42,6 +42,7 @@ export class Progress {
   render() {
     const p = this.p, cost = costFor(p.level);
     this.el.innerHTML = `<h2>${this.near ? this.near.name : 'Beacon'}: you rest. Flasks refilled, enemies stir again.</h2><p>Ashmotes: <b>${p.motes}</b></p>
+    ${p.keyItems.includes('kindling') ? `<h3>Level ${p.level}: level up (${cost} motes each)</h3>${Object.keys(STAT_NAMES).map(k => `<div>${STAT_NAMES[k]}: <b>${p.stats[k]}</b> <button data-a="lvl" data-k="${k}">+</button></div>`).join('')}` : '<p style="opacity:.6">You cannot grow stronger yet. Something the Warden of the keep carries may change that.</p>'}
     <h3>Flasks</h3><button data-a="fl" data-k="0">Crimson ${p.flaskMax[0]}→${p.flaskMax[0] + 1} (${300 * p.flaskMax[0]})</button><button data-a="fl" data-k="1">Cerulean ${p.flaskMax[1]}→${p.flaskMax[1] + 1} (${300 * p.flaskMax[1]})</button>
     <h3>Armor · load ${p.load.toFixed(1)}/${p.maxLoad.toFixed(1)} (${p.tierName})</h3>${ARMOR.map((a, i) => `<button data-a="armor" data-k="${i}" ${i === p.armorIdx ? 'data-sel="1"' : ''}>${a.n} · ${a.w} wt · -${Math.round(a.def * 100)}% dmg</button>`).join('')}
     <p style="opacity:.7">Light load = faster rolls. Heavy = slower. Overweight = no rolling. Your weapon's weight counts. Endurance raises your limit.</p>
@@ -50,7 +51,7 @@ export class Progress {
   }
   click(e) {
     const b = e.target.closest('button'); if (!b) return; const p = this.p, a = b.dataset.a, k = b.dataset.k;
-    if (a === 'lvl') { const c = costFor(p.level); if (p.motes >= c) { p.motes -= c; p.stats[k]++; p.level++; } }
+    if (a === 'lvl' && p.keyItems.includes('kindling')) { const c = costFor(p.level); if (p.motes >= c) { p.motes -= c; p.stats[k]++; p.level++; } }
     else if (a === 'fl') { const c = 300 * p.flaskMax[k]; if (p.motes >= c && p.flaskMax[k] < (k == 0 ? 8 : 6)) { p.motes -= c; p.flaskMax[k]++; p.flask[k]++; } }
     else if (a === 'armor') p.armorIdx = +k;
     else if (a === 'go') { const t = this.w.beacons.find(x => x.name === k); p.pos.set(t.x, t.y, t.z + 2); p.vel.set(0, 0, 0); this.close(); return; }

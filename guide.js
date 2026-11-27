@@ -13,7 +13,7 @@ const STEPS = [
   { t: 'Defeat the Husk Soldier. It raises its arm and glows red before striking: roll, guard or parry.', done: g => !g.w.enemies[0].alive },
   { t: 'Press V to drink your Crimson Flask and heal.', done: g => g.seen.drink },
   { t: 'Walk to the grey Beacon near spawn and press G to rest. There you change armor, upgrade flasks and fast travel.', done: g => g.p.litBeacons.includes('Hollow Beacon') },
-  { t: 'Press T to cast a spell (Z swaps slots, M memorizes). Strongest with the Starwood Staff: press 1 or 2 to switch weapons.', done: g => g.seen.cast },
+  { t: 'Press T to cast your equipped spell (Z swaps slots, M manages them). Staffs and talismans cast stronger; 1 and 2 swap weapons.', done: g => g.seen.cast },
   { t: 'The gate is sealed. Enter the great hall to the north and defeat Orsolt, the Warden of the Hollow Gate.', done: g => g.p.bossesDown.includes('gate') }
 ];
 export class Guide {
@@ -43,7 +43,7 @@ export class Guide {
     this.time += dt / 480; const day = Math.sin(this.time * 6.283) * .5 + .5; // 8-minute day/night cycle
     const dk = w.darkness ? .12 : 1; w.sun.intensity = (.15 + day) * dk; w.hemi.intensity = (.25 + day * .6) * dk; this.tc.set(R.sky).multiplyScalar((.2 + .8 * day) * dk);
     const bg = w.scene.background; bg.lerp(this.tc, Math.min(1, dt * .8)); w.scene.fog.color.copy(bg); w.scene.fog.far += ((w.darkness ? 18 : R.fog) - w.scene.fog.far) * Math.min(1, dt * .8);
-    if ((this.it -= dt) <= 0) { this.it = .25; this.info.innerHTML = `Ashmotes <b>${p.motes}</b><br>Crimson Flask ${p.flask[0]}/${p.flaskMax[0]} (V) · Cerulean ${p.flask[1]}/${p.flaskMax[1]} (B)<br>Load ${Math.round(p.ratio * 100)}% ${p.tierName}<br><b>${R.name}</b><br><i>${this.objective()}</i>${p.lost ? '<br><span style="color:#ffd27a">Your lost motes glow where you fell.</span>' : ''}`; }
+    if ((this.it -= dt) <= 0) { this.it = .25; this.info.innerHTML = `Ashmotes <b>${p.motes}</b>${p.keyItems.includes('kindling') ? ' · Level ' + p.level : ''}<br>Crimson Flask ${p.flask[0]}/${p.flaskMax[0]} (V) · Cerulean ${p.flask[1]}/${p.flaskMax[1]} (B)<br>Load ${Math.round(p.ratio * 100)}% ${p.tierName}<br><b>${R.name}</b><br><i>${this.objective()}</i>${p.lost ? '<br><span style="color:#ffd27a">Your lost motes glow where you fell.</span>' : ''}`; }
     const c = this.map.getContext('2d'), S = 150 / 380, X = x => (x + 190) * S, Z = z => (z + 190) * S; c.clearRect(0, 0, 150, 150);
     for (const r of REGIONS) { const k = r.col.map(v => Math.round(v * 255)); c.fillStyle = p.discovered.includes(r.id) ? `rgba(${k},.75)` : 'rgba(30,30,40,.8)'; c.beginPath(); c.arc(X(r.cx), Z(r.cz), r.r * S, 0, 6.283); c.fill(); }
     for (const b of w.beacons) { if (!p.discovered.includes(regionAt(b.x, b.z).id)) continue; c.fillStyle = p.litBeacons.includes(b.name) ? '#ffb347' : '#889'; c.fillRect(X(b.x) - 2, Z(b.z) - 2, 4, 4); }

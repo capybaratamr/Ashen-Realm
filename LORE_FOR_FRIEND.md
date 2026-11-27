@@ -8,6 +8,7 @@ All the story text lives in one file: **lore.js**. Open it in any text editor (N
 | `INTRO` | Opening screen (and the H help screen) | A few sentences to 3 short paragraphs |
 | `REGION_LORE` | Banner when you enter each of the 6 lands | 1 to 2 sentences |
 | `BOSS_LORE` | Boss cutscene title card + health bar (`name`, `sub`) | Name, plus one short line |
+| `CLASS_LORE` | The 8 starting classes: a name and a one-line description each (keep the keys) | 1 sentence each |
 | `ENDING` | Ending screen after the final boss (a list of paragraphs) | 1 to 3 short paragraphs |
 | `RELIC_LORE` | Name + description of each boss's reward | Name + 1 sentence |
 | `CODEX` | A lore-book screen in the next update | Any number of entries |

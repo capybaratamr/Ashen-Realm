@@ -31,3 +31,7 @@
 - castle.js: you start inside walled Hollow Keep; the gate is sealed until the first boss, Orsolt, Warden of the Hollow Gate (great hall, north), is defeated
 - Leveling removed entirely. Power now comes from weapon upgrades/infusions (cost motes at the anvil), armor, flask upgrades and boss relics
 - lore.js: all story text in one file (intro, ending, region lines, boss names, codex) for easy editing
+## Classes, item discovery, leveling returns
+- Leveling is locked until you defeat Orsolt, who drops the Kindling Stone; then beacons show the level-up menu
+- 8 starting classes (classes.js) with their own stats, armor, weapons and spells; class select appears on a new game and for old saves
+- You only own your class kit. Weapons and spells are found: chests (every chest has an item), boss drops (guaranteed), enemy drops (4% normal / 15% strong), duplicates become motes; a few items are reserved for Phase 9 quest rewards

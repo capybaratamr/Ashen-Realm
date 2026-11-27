@@ -44,3 +44,15 @@ export const CODEX = [
   { title: 'Hollow Keep', text: 'Placeholder: who built the keep and why it was sealed.' },
   { title: 'The Emberless', text: 'Placeholder: who you are.' }
 ];
+
+// Starting classes: name + a short description shown on the class-select screen. Keys are class ids (do not rename the keys).
+export const CLASS_LORE = {
+  knight: { name: 'Knight', desc: 'A sturdy sword-and-shield fighter. Starts with Oath of Fury.' },
+  duelist: { name: 'Duelist', desc: 'Fast curved blades and a dagger. Light armor, quick rolls, and a short blink.' },
+  brute: { name: 'Brute', desc: 'An axe and a great maul. Hits like a collapsing wall and shrugs off damage.' },
+  sorcerer: { name: 'Sorcerer', desc: 'A staff and three sorceries. Fragile, but strikes from far away.' },
+  cleric: { name: 'Cleric', desc: 'A talisman, a holy sword, and healing prayers.' },
+  ranger: { name: 'Ranger', desc: 'A bow for distance, a spear for when they get close.' },
+  dancer: { name: 'Dancer', desc: 'Twin blades and a whip. Relentless and hard to hit.' },
+  wayfarer: { name: 'Wayfarer', desc: 'A balanced start: sword, crossbow, a ward and a mend. A good first pick.' }
+};

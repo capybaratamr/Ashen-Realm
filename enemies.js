@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { heightAt } from './world.js';
 import { Status } from './combat.js';
 import { buildEnemy } from './models.js';
+import { rollDrop } from './loot.js';
 const V = new THREE.Vector3(), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const KINDS = {
   'Husk Soldier': { col: 0x8a5a3c, hp: 90, type: 'physical', amt: 14, poise: 40, status: ['bleed', 40], res: {} },
@@ -25,7 +26,7 @@ export class Enemy {
   get alive() { return this.hp > 0; }
   set(s) { this.s = s; this.t = 0; }
   onStagger() { if (this.alive) this.set('stagger'); }
-  takeDamage(d) { this.hp -= d; this.flash = .12; if (this.hp <= 0) { this.dead = 1e9; this.mesh.visible = false; if (this.pw) { const r = Math.round(this.maxHp * .8); this.pw.motes += r; this.ctx.ui.damage(this.pos.clone().add(new THREE.Vector3(0, 2.6, 0)), '+' + r + ' motes', '#ffd27a'); } } } // stays dead until the player rests at a beacon
+  takeDamage(d) { this.hp -= d; this.flash = .12; if (this.hp <= 0) { this.dead = 1e9; this.mesh.visible = false; if (this.pw) { const r = Math.round(this.maxHp * .8); this.pw.motes += r; this.ctx.ui.damage(this.pos.clone().add(new THREE.Vector3(0, 2.6, 0)), '+' + r + ' motes', '#ffd27a'); rollDrop(this.pw, this.ctx, this.maxHp >= 100); } } } // stays dead until the player rests at a beacon
   statusHurt(n, c) { if (!this.alive) return; this.takeDamage(n); this.ctx.ui.damage(this.pos.clone().add(new THREE.Vector3(0, 2.2, 0)), n, '#' + c.toString(16).padStart(6, '0')); }
   update(dt, w) {
     this.ctx = w.ctx; const p = this.pw = w.player;

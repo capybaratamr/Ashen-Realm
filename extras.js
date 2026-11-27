@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { REGIONS, regionAt } from './regions.js';
 import { heightAt } from './world.js';
+import { chestItem } from './loot.js';
 const UP = new THREE.Vector3(0, 2, 0);
 export class Extras {
   constructor(p, w, ui, prog) {
@@ -37,7 +38,7 @@ export class Extras {
   chest(id, x, z, amt) { const y = heightAt(x, z), t = { k: 'chest', id, x, z, amt, open: this.p.opened.includes(id) }; this.box(1.2, .7, .8, 0x6a4a2a, x, y + .35, z); t.lid = this.box(1.2, .25, .8, 0xc8a24a, x, y + .82, z); if (t.open) t.lid.rotation.x = -1.1; this.things.push(t); }
   use(t) {
     const p = this.p, say = (s, c) => this.ui.damage(p.pos.clone().add(UP), s, c);
-    if (t.k === 'chest') { t.open = true; t.lid.rotation.x = -1.1; p.opened.push(t.id); p.motes += t.amt; say('+' + t.amt + ' motes', '#ffd27a'); if (t.id.endsWith('-h') && p.flaskMax[0] < 8) { p.flaskMax[0]++; p.flask[0]++; say('Golden Seed: +1 Crimson Flask charge', '#ffe9a0'); } }
+    if (t.k === 'chest') { t.open = true; t.lid.rotation.x = -1.1; p.opened.push(t.id); p.motes += t.amt; say('+' + t.amt + ' motes', '#ffd27a'); chestItem(p, this.w.ctx); if (t.id.endsWith('-h') && p.flaskMax[0] < 8) { p.flaskMax[0]++; p.flask[0]++; say('Golden Seed: +1 Crimson Flask charge', '#ffe9a0'); } }
     else if (t.k === 'lever' && !this.gate.open) { this.gate.open = true; this.gate.sink = true; p.opened.push('gate'); for (const c of this.gate.cols) { const i = this.w.colliders.indexOf(c); if (i >= 0) this.w.colliders.splice(i, 1); } say('A distant gate grinds open', '#9fe8ff'); }
   }
   map(on) { this.mapOpen = on; this.mapc.style.display = on ? 'block' : 'none'; this.ui.menu = on; if (on) { document.exitPointerLock(); this.draw(); } }

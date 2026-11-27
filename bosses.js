@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { heightAt } from './world.js';
 import { ARENAS } from './regions.js';
+import { grant } from './loot.js';
 import { ENDING } from './lore.js';
 import { RELICS } from './items.js';
 import { BOSS_LORE } from './lore.js';
@@ -15,6 +16,7 @@ const SL = (wind, amt, r, ph = [1, 2, 3], w = 1) => ({ k: 'slam', wind, amt, r, 
 const CH = (wind, amt, ph = [1, 2, 3], w = 1) => ({ k: 'charge', wind, amt, r: 0, ph, w, poise: 60 });
 const SH = (wind, amt, n, ph = [1, 2, 3], w = 1) => ({ k: 'shot', wind, amt, n, r: 0, ph, w, poise: 20 });
 const ER = (wind, amt, n, ph = [1, 2, 3], w = 1) => ({ k: 'erupt', wind, amt, n, r: 3.2, ph, w, poise: 40 });
+const DROPS = { gate: ['w:Duskiron Greatsword'], tide: ['s:crush'], queen: ['w:Ironbloom Halberd'], moth: ['s:beam'], choir: ['s:judge'], forge: ['w:Marrow Cleaver'], shadow: ['w:Dusk & Dawn Blades'], warden: ['s:rain'], astro: ['w:Colossus Edge', 's:meteor'] }; // guaranteed weapon / spell per boss
 const DEFS = [
   { id: 'gate', name: 'Orsolt, Warden of the Hollow Gate', sub: '', look: 'Husk Soldier', col: 0x6a6a78, scale: 2, hp: 420, ph: [.5], g: 'gate', type: 'physical', spd: 3.2, reward: 500, relic: 'gate', atk: [SW(.9, 20, 4.5), SL(1.1, 24, 6), CH(1, 22, [2])] },
   { id: 'tide', name: 'Tidemaw, the Tidal Colossus', sub: 'The flood remembers every drowned city', look: 'Tide Brute', col: 0x3a6a78, scale: 2.4, hp: 600, ph: [.5], g: 'flood', type: 'physical', spd: 3, reward: 900, relic: 'tide', atk: [SW(.9, 26, 5), SL(1.1, 30, 7), CH(.9, 28, [1, 2]), SH(.9, 18, 3, [2])] },
@@ -25,7 +27,7 @@ const DEFS = [
   { id: 'shadow', name: 'The Umbral Duelist', sub: 'It fights with your own arms', look: 'Husk Soldier', col: 0x14141c, scale: 1.3, hp: 520, ph: [.5], g: 'shadow', type: 'physical', spd: 4.6, reward: 1000, relic: 'shadow', atk: [SW(.5, 18, 3.2), SW(.4, 14, 3.2, [1, 2, 3], 1.2), CH(.6, 22), SH(.7, 14, 3, [2])] },
   { id: 'warden', name: 'The Lantern Warden', sub: 'Only your torch holds back the dark', look: 'Lantern Stalker', col: 0x2a4a30, scale: 2.2, hp: 600, ph: [.5], g: 'dark', type: 'fire', spd: 3.8, reward: 1100, relic: 'warden', atk: [SW(.8, 22, 4.8), SL(1, 26, 6), SH(.8, 16, 3), CH(.8, 24, [2]), ER(1, 20, 3, [2])] },
   { id: 'astro', name: 'Vael Orrun, the Fallen Astronomer', sub: 'He rewrote gravity, and gravity forgot him', look: 'Frost Shade', col: 0x6a4aa0, scale: 2.2, hp: 1200, ph: [.66, .33], g: 'astro', type: 'magic', spd: 3.6, reward: 3000, relic: 'astro', atk: [SW(.8, 26, 5), SL(1, 30, 7), SH(.8, 20, 5), CH(.8, 28), ER(1, 24, 4, [2, 3])] }
-].map((d, i) => ({ ...d, x: ARENAS[i][0], z: ARENAS[i][1], r: ARENAS[i][2], ...(BOSS_LORE[d.id] || {}) }));
+].map((d, i) => ({ ...d, drop: DROPS[d.id] || [], keyItem: d.id === 'gate' ? 'kindling' : null, x: ARENAS[i][0], z: ARENAS[i][1], r: ARENAS[i][2], ...(BOSS_LORE[d.id] || {}) }));
 const CAMP = { k: 'erupt', wind: .9, amt: 24, n: 3, r: 3.2, ph: [1, 2, 3], w: 1, poise: 40 }; // anti-camping punishment
 
 class Boss {
@@ -45,7 +47,8 @@ class Boss {
       this.ringer++; this.ph = this.ringer + 1; this.maxHp = this.hp = Math.round(this.d.pools[this.ringer] * this.hpMult); this.mat.color.setHex([0xcfe0ff, 0x9fb8e8, 0x6a88c8][this.ringer]); this.set('roar'); this.mgr.say('The next ringer steps forward'); this.ctx.sound && this.ctx.sound.sfx('bell');
     } else this.die();
   }
-  die() { const p = this.pw, d = this.d; this.defeated = true; this.hp = 0; this.dead = 1e9; this.mesh.visible = false; this.cleanup(); p.motes += d.reward; if (!p.relics.includes(d.relic)) p.relics.push(d.relic); if (!p.bossesDown.includes(d.id)) p.bossesDown.push(d.id); this.mgr.felled(this); }
+  die() { const p = this.pw, d = this.d; this.defeated = true; this.hp = 0; this.dead = 1e9; this.mesh.visible = false; this.cleanup(); p.motes += d.reward; if (!p.relics.includes(d.relic)) p.relics.push(d.relic); for (const c of d.drop) grant(p, this.ctx, c);
+    if (d.keyItem && !p.keyItems.includes(d.keyItem)) { p.keyItems.push(d.keyItem); this.ctx.ui.damage(p.pos.clone().add(new THREE.Vector3(0, 4.4, 0)), 'Kindling Stone obtained: you can now level up at beacons', '#ffd27a'); } /* key item: unlocks leveling */ if (!p.bossesDown.includes(d.id)) p.bossesDown.push(d.id); this.mgr.felled(this); }
   cleanup() { this.active = false; this.ring.visible = false; for (const k of ['fl', 'lv']) if (this[k]) { this.scene.remove(this[k]); this[k] = null; } if (this.cl) { this.cl.forEach(c => this.scene.remove(c)); this.cl = null; } this.q.length = 0; if (this.pw) this.pw.gmul = 1; this.mgr.w.darkness = 0; this.gf = undefined; }
   reset() { this.cleanup(); this.ringer = 0; this.ph = 1; if (this.d.g === 'choir') this.maxHp = Math.round(this.d.pools[0] * this.hpMult); this.hp = this.maxHp; this.mat.color.setHex(this.d.col); this.pos.copy(this.home); this.set('idle'); }
   engage() { this.active = true; this.ring.visible = true; this.set('choose'); this.cd = .6; this.sx = this.pw.pos.x; this.sz = this.pw.pos.z; if (this.d.g === 'dark') this.mgr.w.darkness = 1; }
