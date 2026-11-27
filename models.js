@@ -22,7 +22,12 @@ const LOOK = {
   'Husk Soldier': { sc: 1, torso: [.8, .9, .5], glow: 0xff3030, weapon: 'sword', helm: 1, shield: 1 },
   'Ember Wretch': { sc: 1.05, torso: [.85, .9, .5], glow: 0xff7a2a, weapon: 'torch', horns: 1, core: 1 },
   'Marsh Hag': { sc: 1, torso: [.6, .8, .4], glow: 0x9aff4a, weapon: 'claws', hunch: .35, hood: 1, long: 1 },
-  'Frost Shade': { sc: 1.15, torso: [.6, 1.1, .4], glow: 0x9fe8ff, weapon: 'staff', robe: 1 }
+  'Frost Shade': { sc: 1.15, torso: [.6, 1.1, .4], glow: 0x9fe8ff, weapon: 'staff', robe: 1 },
+  'Tide Brute': { sc: 1.4, torso: [1, 1.1, .6], glow: 0x66ffd0, weapon: 'sword', hunch: .2 },
+  'Cog Sentinel': { sc: 1.1, torso: [.9, 1, .6], glow: 0xffc040, weapon: 'sword', helm: 1, core: 1 },
+  'Glass Wisp': { sc: .8, torso: [.5, .8, .35], glow: 0xcff8ff, weapon: 'claws', robe: 1, long: 1 },
+  'Bell Acolyte': { sc: 1.1, torso: [.6, 1, .4], glow: 0xfff0b0, weapon: 'staff', robe: 1, hood: 1 },
+  'Lantern Stalker': { sc: 1, torso: [.6, .9, .4], glow: 0xffaa33, weapon: 'torch', hunch: .3, long: 1, horns: 1 }
 };
 export function buildEnemy(name, mat) { // mat is shared by body parts so the hit-flash tints the whole enemy
   const L = LOOK[name], g = new THREE.Group(), body = new THREE.Group(), acc = M(0x1c1c22), gl = new THREE.MeshBasicMaterial({ color: L.glow }), top = 1.35 + L.torso[1] / 2;

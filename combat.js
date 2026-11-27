@@ -29,7 +29,7 @@ export class Status {
 export function applyHit(t, h, ctx) {
   const res = (t.res && t.res[h.type]) || 0;
   const d = Math.max(1, Math.round(h.amt * (1 - res) * (t.status && t.status.frost > 0 ? 1.2 : 1) * (h.crit || 1)));
-  t.takeDamage(d);
+  t.takeDamage(d); if (ctx.sound) ctx.sound.sfx('hit');
   if (h.poise) { t.poise -= h.poise; t.poiseT = 4; if (t.poise <= 0) { t.poise = t.maxPoise; t.onStagger && t.onStagger(); } } // poise break -> stagger
   if (h.status && t.status) t.status.add(h.status[0], h.status[1]);
   const p = t.pos.clone().add(UP), col = h.type === 'physical' ? COLORS.bleed : COLORS[h.type];

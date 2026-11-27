@@ -53,3 +53,10 @@ export function weaponDamage(def, lvl, inf, stats) {
   let bonus = 0; for (const k in sc) bonus += sc[k] * (stats[k] - 8) / 20 * base;
   return Math.round((base + bonus) * 10) / 10;
 }
+// Boss relics: permanent passive bonuses (hp/fp/stam flat, dmg + def fractions, poise flat)
+import { RELIC_LORE } from './lore.js';
+export const RELICS = {
+  gate: { n: "Warden's Signet", hp: 25, stam: 15 }, tide: { n: 'Tidal Heart', hp: 40 }, queen: { n: 'Rewound Mainspring', stam: 30 }, moth: { n: 'Mirrorwing Shard', dmg: .08, def: .04 }, choir: { n: 'Hollow Bell', fp: 30 },
+  forge: { n: "Titan's Ember", dmg: .1 }, shadow: { n: 'Umbral Sigil', poise: 25 }, warden: { n: "Warden's Lantern", hp: 30, fp: 15 }, astro: { n: 'Crown of Stars', hp: 40, fp: 20, stam: 20, dmg: .1 }
+};
+for (const k in RELICS) if (RELIC_LORE[k]) RELICS[k].n = RELIC_LORE[k].n; // names come from lore.js

@@ -22,6 +22,7 @@ export class CameraRig { // third-person orbit camera with soft lock-on
     addEventListener('mousemove', e => { if (document.pointerLockElement && !this.target) { this.yaw -= e.movementX * this.sens; this.pitch = THREE.MathUtils.clamp(this.pitch + e.movementY * this.sens, -.2, 1.2); } });
   }
   update(dt, pl, fx) {
+    if (this.cine) { this.cam.position.copy(this.cine.pos); this.cam.lookAt(this.cine.look); return; } // boss intro cinematic
     if (this.target) { // soft lock: ease yaw toward the line player->target
       const d = V.subVectors(this.target.pos, pl.pos), want = Math.atan2(d.x, d.z) + Math.PI;
       this.yaw += wrap(want - this.yaw) * Math.min(1, dt * 6); this.pitch += (.3 - this.pitch) * Math.min(1, dt * 4);
@@ -29,7 +30,7 @@ export class CameraRig { // third-person orbit camera with soft lock-on
     const f = new THREE.Vector3(Math.sin(this.yaw) * Math.cos(this.pitch), Math.sin(this.pitch), Math.cos(this.yaw) * Math.cos(this.pitch));
     const look = pl.pos.clone().add(new THREE.Vector3(0, 1.5, 0)), p = look.clone().addScaledVector(f, this.dist);
     p.y = Math.max(p.y, heightAt(p.x, p.z) + .6); // don't clip below terrain
-    if (fx.shake > 0) { p.x += (Math.random() - .5) * fx.shake; p.y += (Math.random() - .5) * fx.shake; fx.shake = Math.max(0, fx.shake - dt * 2); }
+    if (fx.shake > 0) { p.x += (Math.random() - .5) * fx.shake * (fx.shakeMul ?? 1); p.y += (Math.random() - .5) * fx.shake * (fx.shakeMul ?? 1); fx.shake = Math.max(0, fx.shake - dt * 2); }
     this.cam.position.copy(p); this.cam.lookAt(look);
   }
   pick(enemies, pl, next) { // Q toggles lock; R cycles to next-nearest
@@ -52,13 +53,14 @@ export class Player {
   constructor(scene) {
     this.pos = new THREE.Vector3(0, 0, 8); this.vel = new THREE.Vector3(); this.face = Math.PI; this.name = 'You'; this.isEnemy = false;
     this.hp = this.maxHp = 100; this.stam = this.maxStam = 100; this.regen = 0; this.poise = this.maxPoise = 35; this.poiseT = 0; this.res = {}; this.slow = 1;
-    this.status = new Status(this); this.stats = { ...STAT0 }; this.wi = 0; this.wlvl = 0; this.inf = 0; this.fp = this.maxFp = 50; this.buff = 0; this.ward = 0; this.nearSmith = false; this.slots = ['dart', 'soulspear', 'nova', 'mend', 'smite', 'familiar']; this.slot = 0; this.absorb = 0; this.absorbT = 0; this.dr = 0; this.drT = 0; this.regenT = 0; this.regenAmt = 0; this.poiseBuffT = 0; this.sp = null; this.cp = 0; this.chg = 0; this.level = 1; this.motes = 0; this.flask = [3, 2]; this.flaskMax = [3, 2]; this.armorIdx = 2; this.spawn = new THREE.Vector3(0, 0, 8); this.lost = null; this.litBeacons = []; this.discovered = ['hollow']; this.tut = 0; this.drinkK = 0; this.armorDef = 0; this.dmgMul = 1; this.spd = 1; this.rollMul = 1; this.regenMul = 1; this.noRoll = false; this.world = null; this.ph = 0;
+    this.status = new Status(this); this.stats = { ...STAT0 }; this.wi = 0; this.wlvl = 0; this.inf = 0; this.fp = this.maxFp = 50; this.buff = 0; this.ward = 0; this.nearSmith = false; this.slots = ['dart', 'soulspear', 'nova', 'mend', 'smite', 'familiar']; this.slot = 0; this.absorb = 0; this.absorbT = 0; this.dr = 0; this.drT = 0; this.regenT = 0; this.regenAmt = 0; this.poiseBuffT = 0; this.sp = null; this.cp = 0; this.chg = 0; this.level = 1; this.motes = 0; this.flask = [3, 2]; this.flaskMax = [3, 2]; this.armorIdx = 2; this.spawn = new THREE.Vector3(0, 0, 8); this.lost = null; this.litBeacons = []; this.discovered = ['hollow']; this.tut = 0; this.drinkK = 0; this.armorDef = 0; this.dmgMul = 1; this.spd = 1; this.rollMul = 1; this.regenMul = 1; this.noRoll = false; this.world = null; this.ph = 0; this.relics = []; this.bossesDown = []; this.ng = 0; this.opened = []; this.mounted = false; this.gmul = 1; this.relicDmg = 1; this.relicPoise = 0;
     this.state = 'free'; this.t = 0; this.combo = 0; this.mv = null; this.hitDone = false; this.queued = false; this.gcd = 0; this.charge = 0;
     this.iframes = false; this.onGround = true; this.plunge = false; this.dir = new THREE.Vector3(); this.dead = false;
     const m = buildKnight(); this.mesh = m.group; this.body = m.body; this.arm = m.arm; this.blade = m.blade; this.shield = m.shield; this.legs = m.legs; this.cape = m.cape; this.torsoMat = m.torsoMat; scene.add(this.mesh);
   }
   spend(n) { if (this.stam <= 0) return false; this.stam -= n; this.regen = .8; return true; }
   forward() { return new THREE.Vector3(Math.sin(this.face), 0, Math.cos(this.face)); }
+  snd(k) { const s = this.ctx && this.ctx.sound; if (s) s.sfx(k); }
   startDrink(k) { // flasks: V = Crimson (HP), B = Cerulean (FP). The charge is spent only when the drink finishes; a hit or a roll cancels it.
     if (this.flask[k] <= 0) { this.ctx.ui.damage(this.pos.clone().add(UPV), 'NO FLASKS', '#ff8080'); return false; }
     this.drinkK = k; this.state = 'drink'; this.t = 0; return true;
@@ -67,17 +69,17 @@ export class Player {
     const k = this.drinkK; this.flask[k]--;
     if (k === 0) { const h = Math.round(this.maxHp * .45); this.hp = Math.min(this.maxHp, this.hp + h); this.ctx.ui.damage(this.pos.clone().add(UPV), '+' + h, '#7ad13a'); }
     else { this.fp = Math.min(this.maxFp, this.fp + this.maxFp * .4); this.ctx.ui.damage(this.pos.clone().add(UPV), 'FP restored', '#6aa0ff'); }
-    this.ctx.particles.burst(this.pos.clone().add(UPV), k ? 0x6aa0ff : 0xff6a6a, 18, 3); this.state = 'free';
+    this.ctx.particles.burst(this.pos.clone().add(UPV), k ? 0x6aa0ff : 0xff6a6a, 18, 3); this.snd('heal'); this.state = 'free';
   }
   walk(dt) { // leg / cape / body animation from ground speed
     const sp = this.onGround ? Math.hypot(this.vel.x, this.vel.z) : 0; this.ph += dt * sp * 1.7; const k = Math.min(1, sp / 4);
     this.legs[0].rotation.x = Math.sin(this.ph) * .8 * k; this.legs[1].rotation.x = -Math.sin(this.ph) * .8 * k;
-    this.cape.rotation.x = .15 + k * .45; this.body.rotation.x = this.state === 'roll' ? .6 : this.state === 'back' ? -.25 : 0; this.body.position.y = Math.sin(this.ph * 2) * .03 * k;
+    this.cape.rotation.x = .15 + k * .45; this.body.rotation.x = this.state === 'roll' ? .6 : this.state === 'back' ? -.25 : 0; this.body.position.y = Math.sin(this.ph * 2) * .03 * k + (this.mounted ? .35 : 0);
   }
   curSpell() { return SPELL_BY_ID[this.slots[this.slot]]; }
   slotLabel() { const s = this.curSpell(); return s ? `Spell ${this.slot + 1}/6: ${s.n} (${s.fp} FP)${s.charge ? ' [hold]' : ''}${this.absorb > 0 ? ' · Ward ' + Math.round(this.absorb) : ''}<br>Z slot · T cast · M memorize` : 'Spell slot empty (M)'; }
   canCast() { const s = this.curSpell(); if (!s) return false; if (this.fp < s.fp) { this.ctx.ui.damage(this.pos.clone().add(UPV), 'NOT ENOUGH FP', '#6aa0ff'); return false; } return true; }
-  beginCast() { const s = this.curSpell(); this.fp -= s.fp; this.sp = s; this.state = 'cast'; this.t = 0; this.chg = 0; } // FP is spent up front, so an interrupted cast is lost
+  beginCast() { const s = this.curSpell(); this.fp -= s.fp; this.sp = s; this.snd('cast'); this.state = 'cast'; this.t = 0; this.chg = 0; } // FP is spent up front, so an interrupted cast is lost
   // Catalysts boost their school (staff -> sorceries, talisman -> incantations); anything else casts at reduced power.
   spellPower(s) { const st = this.stats[s.sch === 'sorc' ? 'int' : 'fai'], c = this.def.cat; return s.amt * (.7 + (st - 8) * .08) * ((s.sch === 'sorc' && c === 'staff') || (s.sch === 'inc' && c === 'talisman') ? 1.5 : .6); }
   castTick(dt, world, lockFace, fx) {
@@ -96,7 +98,7 @@ export class Player {
     const d = this.def, sp = mv.skill ? 1 : d.speed, r = { ...mv, wind: mv.wind / sp, act: mv.act / sp, rec: mv.rec / sp };
     if (!mv.skill && mv.range) r.range = mv.range * d.rng;
     if (d.multi && mv.light) { r.multi = d.multi; r.amt = mv.amt * .6; }
-    this.state = 'attack'; this.t = 0; this.mv = r; this.hitDone = false; this.queued = false;
+    this.state = 'attack'; this.t = 0; this.mv = r; this.snd('swing'); this.hitDone = false; this.queued = false;
   }
   fire(world, m, fx) { // active-frame dispatcher: self-buff, ward, projectiles, or melee arc
     const ctx = world.ctx;
@@ -108,7 +110,7 @@ export class Player {
     } else this.swing(world, m, m.around);
     if (m.shake) fx.shake = m.shake;
   }
-  mk(mv) { return { amt: mv.amt / 12 * this.wdmg() * (this.buff > 0 ? 1.3 : 1), type: mv.type || this.wtype(), poise: mv.poise * this.def.poise, status: this.wstatus(), crit: mv.crit || 1 }; }
+  mk(mv) { return { amt: mv.amt / 12 * this.wdmg() * (this.buff > 0 ? 1.3 : 1) * this.relicDmg, type: mv.type || this.wtype(), poise: mv.poise * this.def.poise, status: this.wstatus(), crit: mv.crit || 1 }; }
   riposteTarget(w) { return w.enemies.find(e => e.s === 'parried' && e.alive && e.pos.distanceTo(this.pos) < 3); }
   turn(x, z, k) { this.face += wrap(Math.atan2(x - this.pos.x, z - this.pos.z) - this.face) * Math.min(1, k); }
   stagger() { this.state = 'stagger'; this.t = 0; this.charge = 0; }
@@ -130,14 +132,14 @@ export class Player {
     const to = V.subVectors(src.pos, this.pos).setY(0).normalize(), mid = this.pos.clone().add(new THREE.Vector3(0, 1.3, 0)).addScaledVector(to, .6);
     if (this.state === 'guard' && to.dot(this.forward()) > .2) {
       if (this.t < (this.def.guard ? .45 : .3)) { // PARRY (shields: longer window)
-        src.set('parried'); src.poise = src.maxPoise; ctx.fx.hitstop = .15; ctx.fx.shake = .3; ctx.particles.burst(mid, 0xffe08a, 30, 7); ctx.ui.damage(this.pos.clone().add(UPV), 'PARRY', '#ffe08a'); return;
+        this.snd('parry'); src.set('parried'); src.poise = src.maxPoise; ctx.fx.hitstop = .15; ctx.fx.shake = .3; ctx.particles.burst(mid, 0xffe08a, 30, 7); ctx.ui.damage(this.pos.clone().add(UPV), 'PARRY', '#ffe08a'); return;
       }
       this.stam -= h.amt * 1.6 * (this.def.guard || 1); this.regen = 1.2; ctx.particles.burst(mid, 0xffd27a, 14, 5); ctx.fx.shake = .15;
       this.takeDamage(Math.round(h.amt * .15)); // chip damage
       if (this.stam <= 0) { this.stam = 0; this.stagger(); ctx.ui.damage(this.pos.clone().add(UPV), 'GUARD BROKEN', '#ff5050'); }
       return;
     }
-    if (this.state === 'cast' || this.state === 'drink') { this.state = 'free'; ctx.ui.damage(this.pos.clone().add(UPV), 'INTERRUPTED', '#ff8080'); } // hits break casting
+    this.mounted = false; if (this.state === 'cast' || this.state === 'drink') { this.state = 'free'; ctx.ui.damage(this.pos.clone().add(UPV), 'INTERRUPTED', '#ff8080'); } // hits break casting
     applyHit(this, h, ctx);
   }
   swing(world, mv, around) { // arc test in front of the player (full circle for plunge)
@@ -150,6 +152,7 @@ export class Player {
   }
   update(dt, cam, world, ui, fx) {
     this.ctx = world.ctx; this.world = world;
+    if (this.mounted) { delete pressed.Mouse0; delete pressed.KeyE; delete pressed.KeyT; delete pressed.KeyC; } // no fighting from the saddle
     if (this.dead) { for (const k in pressed) delete pressed[k]; return; }
     const inp = new THREE.Vector3((K.KeyD ? 1 : 0) - (K.KeyA ? 1 : 0), 0, (K.KeyS ? 1 : 0) - (K.KeyW ? 1 : 0)), moving = inp.lengthSq() > 0;
     inp.normalize(); const s = Math.sin(cam.yaw), c = Math.cos(cam.yaw);
@@ -161,22 +164,23 @@ export class Player {
     this.status.update(dt); this.gcd -= dt; this.t += dt; this.iframes = false; this.aim = cam.target;
     this.fp = Math.min(this.maxFp, this.fp + .6 * dt); this.buff -= dt; if ((this.ward -= dt) > 0) this.iframes = true; // slow FP regen until flasks exist (Phase 5)
     this.nearSmith = Math.hypot(this.pos.x - 3, this.pos.z - 5) < 4; // smith anvil: X infuse, U upgrade (free for now)
-    if (this.nearSmith) { if (pressed.KeyX) this.inf = (this.inf + 1) % INFUSIONS.length; if (pressed.KeyU) this.wlvl = (this.wlvl + 1) % 11; }
+    if (this.nearSmith) { if (pressed.KeyX && this.motes >= 100) { this.motes -= 100; this.inf = (this.inf + 1) % INFUSIONS.length; } // smith: infusing costs 100 motes
+      if (pressed.KeyU && this.wlvl < 10 && this.motes >= 150 * (this.wlvl + 1)) { this.motes -= 150 * (this.wlvl + 1); this.wlvl++; } } // upgrading costs 150 x next level (this closes the nearSmith block) }
     if (pressed.KeyZ) this.slot = (this.slot + 1) % this.slots.length;
-    this.absorbT -= dt; if (this.absorbT <= 0) this.absorb = 0; this.drT -= dt; this.poiseBuffT -= dt; this.maxPoise = (this.poiseBuffT > 0 ? 75 : 35) + (this.armor ? this.armor.poise : 0); if ((this.regenT -= dt) > 0) this.hp = Math.min(this.maxHp, this.hp + this.regenAmt * dt);
+    this.absorbT -= dt; if (this.absorbT <= 0) this.absorb = 0; this.drT -= dt; this.poiseBuffT -= dt; this.maxPoise = (this.poiseBuffT > 0 ? 75 : 35) + (this.armor ? this.armor.poise : 0) + this.relicPoise; if ((this.regenT -= dt) > 0) this.hp = Math.min(this.maxHp, this.hp + this.regenAmt * dt);
     if ((this.poiseT -= dt) <= 0) this.poise = Math.min(this.maxPoise, this.poise + 10 * dt);
     let sprinting = false, vx = 0, vz = 0;
     const lockFace = () => { if (cam.target) this.turn(cam.target.pos.x, cam.target.pos.z, dt * 12); else if (moving) this.face += wrap(Math.atan2(wd.x, wd.z) - this.face) * Math.min(1, dt * 14); };
 
     if (this.state === 'free' || this.state === 'guard') {
-      const g = this.state === 'guard', sp = !g && K.ShiftLeft && moving && this.stam > 0 && this.onGround;
+      const g = this.state === 'guard', sp = !g && !this.mounted && K.ShiftLeft && moving && this.stam > 0 && this.onGround;
       if (sp) { sprinting = true; this.stam -= 12 * dt; this.regen = .8; }
-      const speed = (g ? 2 : sp ? 7 : cam.target ? 3.6 : 4.2) * this.slow * this.spd;
+      const speed = (this.mounted ? 10 : g ? 2 : sp ? 7 : cam.target ? 3.6 : 4.2) * this.slow * this.spd;
       if (moving) { vx = wd.x * speed; vz = wd.z * speed; } lockFace();
       if (g && !K.Mouse2) { this.state = 'free'; this.gcd = .3; }
       if (pressed.Space && this.onGround && !(this.noRoll && moving) && this.spend(moving ? 20 : 12)) {
-        this.state = moving ? 'roll' : 'back'; this.t = 0; this.dir.copy(moving ? wd : this.forward().negate()); if (moving) this.face = Math.atan2(wd.x, wd.z);
-      } else if (pressed.KeyF && this.onGround && this.spend(15)) { this.vel.y = 8; this.onGround = false; }
+        this.state = moving ? 'roll' : 'back'; this.t = 0; this.snd('roll'); this.dir.copy(moving ? wd : this.forward().negate()); if (moving) this.face = Math.atan2(wd.x, wd.z);
+      } else if (pressed.KeyF && this.onGround && this.spend(15)) { this.vel.y = this.mounted ? 11 : 8; this.onGround = false; }
       else if (pressed.KeyC && this.onGround && this.fp >= SKILLS[this.def.skill].fp && this.spend(10)) { const s = SKILLS[this.def.skill]; this.fp -= s.fp; this.begin({ ...s.mv, skill: 1 }); } // weapon skill
       else if (pressed.Mouse0) {
         const r = this.riposteTarget(world);
@@ -215,7 +219,7 @@ export class Player {
     this.shield.visible = this.state === 'guard'; this.mesh.rotation.z = this.state === 'stagger' ? .25 : 0;
     this.blade.material.emissive.setHex(this.state === 'charge' ? 0x884400 : 0);
 
-    const k = Math.min(1, dt * (this.onGround ? 14 : 3)); this.vel.x += (vx - this.vel.x) * k; this.vel.z += (vz - this.vel.z) * k; this.vel.y -= GRAV * dt;
+    const k = Math.min(1, dt * (this.onGround ? 14 : 3)); this.vel.x += (vx - this.vel.x) * k; this.vel.z += (vz - this.vel.z) * k; this.vel.y -= GRAV * this.gmul * dt; // gmul: the Astronomer bends gravity
     const gx = heightAt(this.pos.x + .5, this.pos.z) - heightAt(this.pos.x - .5, this.pos.z), gz = heightAt(this.pos.x, this.pos.z + .5) - heightAt(this.pos.x, this.pos.z - .5);
     if (this.onGround && Math.hypot(gx, gz) > .85) { this.vel.x -= gx * 60 * dt; this.vel.z -= gz * 60 * dt; } // too steep: slide
     this.pos.addScaledVector(this.vel, dt);

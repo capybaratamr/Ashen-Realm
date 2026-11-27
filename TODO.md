@@ -1,7 +1,7 @@
 # TODO
-- [x] Phases 1-4: movement, combat, 27 weapons, 27 spells
-- [x] Phase 5: save slots, flasks, motes + death drop, beacons, level-up, armor + equip load. Missing: inventory screen, weapon unlocks/loot, smithing stones, flask-charge items
-- [~] Phase 6 done: 6 themed regions, day/night, fog, minimap, discovery, marsh hazard, patrol/flee AI. Missing: full map screen, weather, region ambient audio, hidden areas, chests, lever shortcuts, 3+ enemy types per region (have 1-2), group AI, mount
-- [ ] Phase 7: 8 bosses (+ final: Fallen Astronomer, 3 phases), arenas, cutscenes
-- [ ] Phase 8: menus/settings/keybinds, post-processing, low-end mode, accessibility, synthesized sound effects, NG+
-- Roadmap requested: lore codex, more weapons, better animations
+- [x] Phases 1-7 (see CHANGELOG). Start area is now Hollow Keep (castle); first boss Orsolt opens the gate. No leveling.
+- [~] Phase 8: pause/settings, post-processing, low-end mode, accessibility done. Open: title screen, key rebinding, gamepad, lore codex screen (reads CODEX in lore.js), profiling, animation polish
+- [ ] Lore: friend is writing it. Everything goes in lore.js (LORE, ENDING, REGION_LORE, BOSS_TEXT, CODEX)
+- [ ] Phase 9 (planned): towns in the outer lands with NPC merchants, marketplaces (buy/sell/barter, motes are the currency), trading, quest givers + quest log
+- [ ] More weapons; boss-unique weapons; castle/NPC interiors
+- Not yet playtested in a browser: expect balance and bug fixes

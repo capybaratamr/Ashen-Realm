@@ -1,8 +1,8 @@
 // Onboarding + world feedback: lore intro, step-by-step tutorial, objective, region banners, day/night, HUD info panel, minimap, help (H).
 import * as THREE from 'three';
 import { REGIONS, regionAt } from './regions.js';
-const LORE = 'The great Lantern that hung above the world went dark the night the astronomer Vael Orrun tried to rewrite gravity. Ash has fallen ever since, and the old lands drift apart in the gloom. You are an Emberless, a hollow woken by the last beacon in Ashen Hollow. Relight the beacons of the six lands, and climb toward whatever the astronomer became.';
-const CONTROLS = 'WASD move · Mouse camera · Shift sprint · Space roll/backstep · F jump\nLeft click attack/combo · E hold = charged heavy · Right click guard (raise just before a hit to parry, then left click = riposte)\nQ lock-on · R switch target · 1/2 weapon · C weapon skill\nT cast spell (hold for some) · Z next spell · M memorize spells\nV Crimson flask (heal) · B Cerulean flask (FP) · G rest at a beacon (level up, armor, fast travel)\nP save/load · H this help · K skip tutorial';
+import { INTRO as LORE } from './lore.js'; // story text lives in lore.js
+const CONTROLS = 'WASD move · Mouse camera · Shift sprint · Space roll/backstep · F jump\nLeft click attack/combo · E hold = charged heavy · Right click guard (raise just before a hit to parry, then left click = riposte)\nQ lock-on · R switch target · 1/2 weapon · C weapon skill\nT cast spell (hold for some) · Z next spell · M memorize spells\nV Crimson flask (heal) · B Cerulean flask (FP) · G rest at a beacon (armor, flasks, fast travel)\nY mount/dismount · N full map · G open chests / pull levers (hit suspicious walls) · P save/load · H help · K skip tutorial · Esc pause/settings';
 const STEPS = [
   { t: 'Move with W A S D and look around with the mouse.', done: g => g.moved > 6 },
   { t: 'Hold SHIFT while moving to sprint. It drains stamina (the green bar).', done: g => g.seen.sprint },
@@ -12,8 +12,9 @@ const STEPS = [
   { t: 'Hold RIGHT mouse to guard. Raise it just BEFORE its swing lands to parry, then left-click to riposte!', done: g => g.seen.guard },
   { t: 'Defeat the Husk Soldier. It raises its arm and glows red before striking: roll, guard or parry.', done: g => !g.w.enemies[0].alive },
   { t: 'Press V to drink your Crimson Flask and heal.', done: g => g.seen.drink },
-  { t: 'Walk to the grey Beacon near spawn and press G to rest. There you spend Ashmotes to level up and change armor.', done: g => g.p.litBeacons.includes('Hollow Beacon') },
-  { t: 'Press T to cast a spell (Z swaps slots, M memorizes). Strongest with the Starwood Staff: press 1 or 2 to switch weapons.', done: g => g.seen.cast }
+  { t: 'Walk to the grey Beacon near spawn and press G to rest. There you change armor, upgrade flasks and fast travel.', done: g => g.p.litBeacons.includes('Hollow Beacon') },
+  { t: 'Press T to cast a spell (Z swaps slots, M memorizes). Strongest with the Starwood Staff: press 1 or 2 to switch weapons.', done: g => g.seen.cast },
+  { t: 'The gate is sealed. Enter the great hall to the north and defeat Orsolt, the Warden of the Hollow Gate.', done: g => g.p.bossesDown.includes('gate') }
 ];
 export class Guide {
   constructor(p, w, ui) {
@@ -29,7 +30,7 @@ export class Guide {
     });
     let seenIntro = false; try { seenIntro = localStorage.getItem('ashenrealm.intro'); } catch { } if (!seenIntro) this.show(true);
   }
-  objective() { const n = this.p.litBeacons.length; return this.p.tut < STEPS.length ? 'Learn the basics in Ashen Hollow (follow the prompts at the bottom).' : n < 6 ? `Light every beacon: ${n}/6. Each land has one. Travel outward from the Hollow, fight what guards it, and rest at it with G.` : 'All beacons lit. The Fallen Astronomer stirs... (final bosses arrive in a later update).'; }
+  objective() { const n = this.p.litBeacons.length; if (!this.p.bossesDown.includes('gate')) return 'Escape Hollow Keep: defeat Orsolt, Warden of the Hollow Gate, in the great hall to the north.'; return this.p.tut < STEPS.length ? 'Learn the basics (follow the prompts at the bottom).' : n < 6 ? `Light every beacon: ${n}/6. Each land has one. Travel outward from the Hollow, fight its guardian (bosses felled ${this.p.bossesDown.length}/9), and rest at it with G.` : 'All six beacons are lit. The observatory gate far to the north is open: face the Fallen Astronomer.'; }
   show(first) { this.open = true; this.ui.menu = true; document.exitPointerLock(); this.over.style.display = 'block'; this.over.innerHTML = `<h1 style="letter-spacing:6px">ASHEN REALM</h1><p>${LORE}</p><h3>Your goal</h3><p>${this.objective()}</p><h3>Controls</h3><pre style="font-family:inherit;white-space:pre-wrap">${CONTROLS}</pre><p><b>Press Enter${first ? '' : ' or H'} to ${first ? 'begin' : 'close'}, then click the game to capture the mouse.</b></p>`; }
   hide() { this.open = false; this.ui.menu = false; this.over.style.display = 'none'; try { localStorage.setItem('ashenrealm.intro', '1'); } catch { } }
   update(dt, rig) {
@@ -38,11 +39,11 @@ export class Guide {
     const s = STEPS[st]; if (s && !this.open && s.done(this)) { p.tut = st + 1; this.seen = {}; this.moved = 0; }
     this.prompt.style.display = s ? 'block' : 'none'; if (s) this.prompt.innerHTML = `Tutorial ${st + 1}/${STEPS.length}<br>${s.t}<br><small style="opacity:.6">K skips the tutorial · H help</small>`;
     const R = regionAt(p.pos.x, p.pos.z);
-    if (R !== this.reg) { this.reg = R; if (!p.discovered.includes(R.id)) p.discovered.push(R.id); this.banner.innerHTML = `${R.name}<div style="font-size:18px;letter-spacing:1px;margin-top:8px">${R.lore}</div>`; this.banner.style.opacity = 1; clearTimeout(this.bt); this.bt = setTimeout(() => this.banner.style.opacity = 0, 4000); }
+    if (R !== this.reg) { this.reg = R; if (w.ctx.sound) w.ctx.sound.ambient(R.id); if (!p.discovered.includes(R.id)) p.discovered.push(R.id); this.banner.innerHTML = `${R.name}<div style="font-size:18px;letter-spacing:1px;margin-top:8px">${R.lore}</div>`; this.banner.style.opacity = 1; clearTimeout(this.bt); this.bt = setTimeout(() => this.banner.style.opacity = 0, 4000); }
     this.time += dt / 480; const day = Math.sin(this.time * 6.283) * .5 + .5; // 8-minute day/night cycle
-    w.sun.intensity = .15 + day; w.hemi.intensity = .25 + day * .6; this.tc.set(R.sky).multiplyScalar(.2 + .8 * day);
-    const bg = w.scene.background; bg.lerp(this.tc, Math.min(1, dt * .8)); w.scene.fog.color.copy(bg); w.scene.fog.far += (R.fog - w.scene.fog.far) * Math.min(1, dt * .8);
-    if ((this.it -= dt) <= 0) { this.it = .25; this.info.innerHTML = `Ashmotes <b>${p.motes}</b> · Level ${p.level}<br>Crimson Flask ${p.flask[0]}/${p.flaskMax[0]} (V) · Cerulean ${p.flask[1]}/${p.flaskMax[1]} (B)<br>Load ${Math.round(p.ratio * 100)}% ${p.tierName}<br><b>${R.name}</b><br><i>${this.objective()}</i>${p.lost ? '<br><span style="color:#ffd27a">Your lost motes glow where you fell.</span>' : ''}`; }
+    const dk = w.darkness ? .12 : 1; w.sun.intensity = (.15 + day) * dk; w.hemi.intensity = (.25 + day * .6) * dk; this.tc.set(R.sky).multiplyScalar((.2 + .8 * day) * dk);
+    const bg = w.scene.background; bg.lerp(this.tc, Math.min(1, dt * .8)); w.scene.fog.color.copy(bg); w.scene.fog.far += ((w.darkness ? 18 : R.fog) - w.scene.fog.far) * Math.min(1, dt * .8);
+    if ((this.it -= dt) <= 0) { this.it = .25; this.info.innerHTML = `Ashmotes <b>${p.motes}</b><br>Crimson Flask ${p.flask[0]}/${p.flaskMax[0]} (V) · Cerulean ${p.flask[1]}/${p.flaskMax[1]} (B)<br>Load ${Math.round(p.ratio * 100)}% ${p.tierName}<br><b>${R.name}</b><br><i>${this.objective()}</i>${p.lost ? '<br><span style="color:#ffd27a">Your lost motes glow where you fell.</span>' : ''}`; }
     const c = this.map.getContext('2d'), S = 150 / 380, X = x => (x + 190) * S, Z = z => (z + 190) * S; c.clearRect(0, 0, 150, 150);
     for (const r of REGIONS) { const k = r.col.map(v => Math.round(v * 255)); c.fillStyle = p.discovered.includes(r.id) ? `rgba(${k},.75)` : 'rgba(30,30,40,.8)'; c.beginPath(); c.arc(X(r.cx), Z(r.cz), r.r * S, 0, 6.283); c.fill(); }
     for (const b of w.beacons) { if (!p.discovered.includes(regionAt(b.x, b.z).id)) continue; c.fillStyle = p.litBeacons.includes(b.name) ? '#ffb347' : '#889'; c.fillRect(X(b.x) - 2, Z(b.z) - 2, 4, 4); }

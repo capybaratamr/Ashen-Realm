@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { REGIONS, regionAt } from './regions.js';
 import { heightAt } from './world.js';
+import { RELICS } from './items.js';
 export const ARMOR = [
   { n: 'Bare Skin', w: 0, def: 0, poise: 0, col: 0x9a7a60 }, { n: "Wanderer's Rags", w: 2, def: .03, poise: 0, col: 0x6a5a48 }, { n: 'Warden Leathers', w: 7, def: .12, poise: 6, col: 0x7a5a3a },
   { n: 'Gilt Mail', w: 14, def: .22, poise: 16, col: 0xb8a060 }, { n: 'Cinderplate', w: 24, def: .32, poise: 30, col: 0x5a3a3a }, { n: 'Colossus Harness', w: 38, def: .42, poise: 50, col: 0x4a5058 }
@@ -12,11 +13,12 @@ const costFor = lv => Math.round(60 * 1.14 ** lv); // scaling level-up cost curv
 export function recalc(p) { // derived stats: vigor->HP, mind->FP, endurance->stamina + equip load; load ratio picks a tier
   const s = p.stats, A = ARMOR[p.armorIdx];
   p.maxHp = 100 + 6 * (s.vig - 10); p.maxFp = 50 + 4 * (s.mind - 10); p.maxStam = 100 + 4 * (s.end - 10);
-  p.armor = A; p.armorDef = A.def; p.maxLoad = 30 + 1.8 * (s.end - 10); p.load = A.w + WEIGHT[p.def.cat]; const r = p.ratio = p.load / p.maxLoad;
+  let rd = 0, rdef = 0, rp = 0; for (const id of p.relics) { const r = RELICS[id]; if (!r) continue; p.maxHp += r.hp || 0; p.maxFp += r.fp || 0; p.maxStam += r.stam || 0; rd += r.dmg || 0; rdef += r.def || 0; rp += r.poise || 0; } // boss relics
+  p.relicDmg = 1 + rd; p.relicPoise = rp; p.armor = A; p.armorDef = A.def + rdef; p.maxLoad = 30 + 1.8 * (s.end - 10); p.load = A.w + WEIGHT[p.def.cat]; const r = p.ratio = p.load / p.maxLoad;
   [p.tierName, p.rollMul, p.dmgMul, p.spd, p.regenMul] = r < .1 ? ['Underweight', 1.3, 1.2, 1, 1] : r < .3 ? ['Light', 1.15, 1, 1, 1] : r < .7 ? ['Medium', 1, 1, 1, 1] : r < 1 ? ['Heavy', .85, 1, .9, .85] : ['OVERWEIGHT', .6, 1, .6, .5];
   p.noRoll = r >= 1; p.hp = Math.min(p.hp, p.maxHp); p.fp = Math.min(p.fp, p.maxFp); p.stam = Math.min(p.stam, p.maxStam); if (p.torsoMat) p.torsoMat.color.setHex(A.col);
 }
-export function respawnAll(w) { for (const e of w.enemies) { e.hp = e.maxHp; e.poise = e.maxPoise; e.mesh.visible = true; e.pos.copy(e.home); e.status.reset(); e.s = 'idle'; e.t = 0; e.dead = 0; e.cd = 1; } }
+export function respawnAll(w) { for (const e of w.enemies) { if (e.defeated) continue; e.hp = e.maxHp; e.poise = e.maxPoise; e.mesh.visible = true; e.pos.copy(e.home); e.status.reset(); e.s = 'idle'; e.t = 0; e.dead = 0; e.cd = 1; } }
 export function dropMotes(p) { // die: motes stay at the death spot. Die again before reaching them and they are gone.
   const w = p.world; if (p.lost) { w.scene.remove(p.lost.mesh); p.lost = null; }
   if (p.motes > 0) { const m = new THREE.Mesh(new THREE.SphereGeometry(.4, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffd27a })); m.position.set(p.pos.x, p.pos.y + 1, p.pos.z); w.scene.add(m); p.lost = { x: p.pos.x, z: p.pos.z, amt: p.motes, mesh: m }; p.motes = 0; }
@@ -39,8 +41,7 @@ export class Progress {
   close() { this.open = false; this.ui.menu = false; this.el.style.display = 'none'; this.saves.save(this.saves.slot, true); }
   render() {
     const p = this.p, cost = costFor(p.level);
-    this.el.innerHTML = `<h2>${this.near ? this.near.name : 'Beacon'}: you rest. Flasks refilled, enemies stir again.</h2><p>Ashmotes: <b>${p.motes}</b> · Level ${p.level}</p>
-    <h3>Level up (${cost} motes each)</h3>${Object.keys(STAT_NAMES).map(k => `<div>${STAT_NAMES[k]}: <b>${p.stats[k]}</b> <button data-a="lvl" data-k="${k}">+</button></div>`).join('')}
+    this.el.innerHTML = `<h2>${this.near ? this.near.name : 'Beacon'}: you rest. Flasks refilled, enemies stir again.</h2><p>Ashmotes: <b>${p.motes}</b></p>
     <h3>Flasks</h3><button data-a="fl" data-k="0">Crimson ${p.flaskMax[0]}→${p.flaskMax[0] + 1} (${300 * p.flaskMax[0]})</button><button data-a="fl" data-k="1">Cerulean ${p.flaskMax[1]}→${p.flaskMax[1] + 1} (${300 * p.flaskMax[1]})</button>
     <h3>Armor · load ${p.load.toFixed(1)}/${p.maxLoad.toFixed(1)} (${p.tierName})</h3>${ARMOR.map((a, i) => `<button data-a="armor" data-k="${i}" ${i === p.armorIdx ? 'data-sel="1"' : ''}>${a.n} · ${a.w} wt · -${Math.round(a.def * 100)}% dmg</button>`).join('')}
     <p style="opacity:.7">Light load = faster rolls. Heavy = slower. Overweight = no rolling. Your weapon's weight counts. Endurance raises your limit.</p>

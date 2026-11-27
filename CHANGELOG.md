@@ -22,3 +22,12 @@
 - regions.js: 6 themed regions (hub, marsh, clockwork city, glass desert, frozen monastery, lantern forest) with own terrain colors/roughness, props, enemies, fog/sky; marsh water poisons
 - guide.js: lore intro, 10-step tutorial, objective (light 6 beacons), region banners, day/night cycle, HUD info panel, minimap with discovery, help screen (H)
 - Enemies patrol, flee when wounded, and stay dead until you rest; save now stores level, motes, flasks, armor, beacons, tutorial step
+## Phase 6 finished, Phase 7 and start of Phase 8
+- extras.js: weather (rain/snow/ash), 12 chests + hidden chests behind illusory walls (hit the wall), lever-operated gate, mount (Y), full map (N)
+- 9 enemy types, 3 per outer region; pack alerts; difficulty scaling
+- bosses.js: 8 bosses (Tidemaw, Horologe Queen, Prism, Frozen Choir, Cinderhold, Umbral Duelist, Lantern Warden, Fallen Astronomer) with arenas, cinematic intros, 2-3 phases, telegraphs, per-boss mechanics, anti-camping/anti-kiting rules, relics, boss bar, ending + New Game+
+- audio.js: synthesized sound effects + per-region ambient; settings.js: pause/settings menu, bloom/vignette/grain, low-end mode, reduced shake, color-blind HUD
+## Castle start, no leveling
+- castle.js: you start inside walled Hollow Keep; the gate is sealed until the first boss, Orsolt, Warden of the Hollow Gate (great hall, north), is defeated
+- Leveling removed entirely. Power now comes from weapon upgrades/infusions (cost motes at the anvil), armor, flask upgrades and boss relics
+- lore.js: all story text in one file (intro, ending, region lines, boss names, codex) for easy editing

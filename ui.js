@@ -10,7 +10,7 @@ export function createUI(camera) {
     update(pl, target) {
       hp.style.width = Math.max(0, pl.hp / pl.maxHp * 100) + '%'; st.style.width = Math.max(0, pl.stam / pl.maxStam * 100) + '%';
       $('stat').innerHTML = Object.entries(pl.status.m).filter(([k, v]) => v > .5 || pl.status[k] > 0).map(([k, v]) => `<span style="color:#${COLORS[k].toString(16).padStart(6, '0')}">${k.toUpperCase()} ${pl.status[k] > 0 ? 'ACTIVE' : Math.round(v)}</span>`).join(' · ');
-      $('fp').firstChild.style.width = pl.fp / pl.maxFp * 100 + '%'; $('cb').style.display = pl.state === 'cast' ? 'block' : 'none'; $('cb').firstChild.style.width = (pl.cp || 0) * 100 + '%'; $('wpn').innerHTML = pl.wlabel() + '<br>' + pl.slotLabel() + (pl.nearSmith ? '<br>Smith: X infuse · U upgrade' : '');
+      $('fp').firstChild.style.width = pl.fp / pl.maxFp * 100 + '%'; $('cb').style.display = pl.state === 'cast' ? 'block' : 'none'; $('cb').firstChild.style.width = (pl.cp || 0) * 100 + '%'; $('wpn').innerHTML = pl.wlabel() + '<br>' + pl.slotLabel() + (pl.nearSmith ? '<br>Smith: X infuse (100 motes) · U upgrade (' + (pl.wlvl < 10 ? 150 * (pl.wlvl + 1) + ' motes' : 'max') + ')' : '');
       if (target) {
         const [x, y, ok] = toScreen(target.pos.clone().add(new THREE.Vector3(0, 1.2, 0))); ret.style.display = ok ? 'block' : 'none'; ret.style.left = x + 'px'; ret.style.top = y + 'px';
         tbar.style.display = 'block'; $('tn').textContent = target.name; th.style.width = Math.max(0, target.hp / target.maxHp * 100) + '%';

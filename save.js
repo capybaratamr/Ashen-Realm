@@ -18,11 +18,11 @@ export class SaveManager {
   write(n, d) { try { localStorage.setItem(KEY(n), JSON.stringify(d)); localStorage.setItem('ashenrealm.slot', n); return true; } catch { this.toast('Could not save (browser storage blocked)'); return false; } }
   toast(t) { this.toastEl.textContent = t; this.toastEl.style.display = 'block'; clearTimeout(this.tt); this.tt = setTimeout(() => this.toastEl.style.display = 'none', 2200); }
   snapshot() { // add new persistent fields here as later phases land (levels, flasks, inventory...)
-    const p = this.p; return { v: 1, t: Date.now(), play: Math.floor(this.play), pos: [p.pos.x, p.pos.y, p.pos.z], hp: p.hp, fp: p.fp, wi: p.wi, wlvl: p.wlvl, inf: p.inf, stats: p.stats, slots: p.slots, slot: p.slot, lvl: p.level, motes: p.motes, fl: p.flask, flm: p.flaskMax, ar: p.armorIdx, sp: [p.spawn.x, p.spawn.y, p.spawn.z], lit: p.litBeacons, disc: p.discovered, tut: p.tut };
+    const p = this.p; return { v: 1, t: Date.now(), play: Math.floor(this.play), pos: [p.pos.x, p.pos.y, p.pos.z], hp: p.hp, fp: p.fp, wi: p.wi, wlvl: p.wlvl, inf: p.inf, stats: p.stats, slots: p.slots, slot: p.slot, lvl: p.level, motes: p.motes, fl: p.flask, flm: p.flaskMax, ar: p.armorIdx, sp: [p.spawn.x, p.spawn.y, p.spawn.z], lit: p.litBeacons, disc: p.discovered, tut: p.tut, rel: p.relics, bd: p.bossesDown, ng: p.ng, op: p.opened };
   }
   apply(d) {
     const p = this.p; p.pos.set(...d.pos); p.vel.set(0, 0, 0); p.hp = Math.max(1, d.hp); p.fp = d.fp; p.wi = d.wi; p.wlvl = d.wlvl; p.inf = d.inf; p.stats = { ...p.stats, ...d.stats }; p.slots = d.slots; p.slot = d.slot;
-    if (d.lvl) { p.level = d.lvl; p.motes = d.motes || 0; p.flask = d.fl || p.flask; p.flaskMax = d.flm || p.flaskMax; p.armorIdx = d.ar ?? p.armorIdx; if (d.sp) p.spawn.set(...d.sp); p.litBeacons = d.lit || []; p.discovered = d.disc || ['hollow']; p.tut = d.tut || 0; }
+    if (d.lvl) { p.level = d.lvl; p.motes = d.motes || 0; p.flask = d.fl || p.flask; p.flaskMax = d.flm || p.flaskMax; p.armorIdx = d.ar ?? p.armorIdx; if (d.sp) p.spawn.set(...d.sp); p.litBeacons = d.lit || []; p.discovered = d.disc || ['hollow']; p.tut = d.tut || 0; p.relics = d.rel || []; p.bossesDown = d.bd || []; p.ng = d.ng || 0; p.opened = d.op || []; }
     p.blade.scale.z = p.def.rng; p.blade.visible = p.def.cat !== 'shield'; p.status.reset(); p.state = 'free'; this.play = d.play || 0;
   }
   save(n, quiet) { this.slot = n; if (this.write(n, this.snapshot()) && !quiet) this.toast('Saved to slot ' + n); }
