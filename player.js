@@ -60,6 +60,11 @@ export class Player {
   }
   spend(n) { if (this.stam <= 0) return false; this.stam -= n; this.regen = .8; return true; }
   forward() { return new THREE.Vector3(Math.sin(this.face), 0, Math.cos(this.face)); }
+  syncWeaponModel() { // use a loaded GLB for the current weapon (key 'weapon:<name>'), otherwise the procedural blade
+    const a = this.ctx && this.ctx.assets, key = 'weapon:' + this.def.name, sig = key + (a && a.has(key));
+    if (this.wmSig !== sig) { this.wmSig = sig; if (this.wm) { this.arm.remove(this.wm); this.wm = null; } if (a && a.has(key)) { this.wm = a.instance(key).root; this.wm.position.set(0, -.6, .1); this.arm.add(this.wm); } }
+    this.blade.visible = !this.wm && this.def.cat !== 'shield';
+  }
   snd(k) { const s = this.ctx && this.ctx.sound; if (s) s.sfx(k); }
   startDrink(k) { // flasks: V = Crimson (HP), B = Cerulean (FP). The charge is spent only when the drink finishes; a hit or a roll cancels it.
     if (this.flask[k] <= 0) { this.ctx.ui.damage(this.pos.clone().add(UPV), 'NO FLASKS', '#ff8080'); return false; }
@@ -235,7 +240,7 @@ export class Player {
     } else if (this.pos.y > gh + .05) this.onGround = false;
     if (this.pos.y < -40) this.takeDamage(999);
     if (!sprinting && this.regen <= 0 && ['free', 'roll', 'back'].includes(this.state)) this.stam = Math.min(this.maxStam, this.stam + 28 * dt * this.slow * this.regenMul);
-    this.regen -= dt; this.walk(dt); this.mesh.position.copy(this.pos); this.mesh.rotation.y = this.face;
+    this.regen -= dt; this.syncWeaponModel(); this.walk(dt); this.mesh.position.copy(this.pos); this.mesh.rotation.y = this.face;
     for (const k in pressed) delete pressed[k];
   }
 }

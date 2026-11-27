@@ -12,6 +12,7 @@ import { Extras } from './extras.js';
 import { Bosses } from './bosses.js';
 import { Castle } from './castle.js';
 import { ClassSelect } from './classes.js';
+import { Assets } from './assets.js';
 import { Settings, initPost } from './settings.js';
 import { createUI } from './ui.js';
 const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -20,10 +21,11 @@ const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(70, innerW
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); if (post) post.c.setSize(innerWidth, innerHeight); });
 const world = buildWorld(scene), player = new Player(scene), rig = new CameraRig(camera, renderer.domElement), ui = createUI(camera);
 const fx = { shake: 0, hitstop: 0 }, particles = new Particles(scene);
-const sound = new Sound(), projectiles = new Projectiles(scene); world.scene = scene; world.delayed = []; world.summons = []; ui.bind(player); const saves = new SaveManager(player, ui); world.ctx = { fx, ui, particles, projectiles, sound }; world.player = player;
+const assets = new Assets(), sound = new Sound(), projectiles = new Projectiles(scene); world.scene = scene; world.delayed = []; world.summons = []; ui.bind(player); const saves = new SaveManager(player, ui); world.ctx = { fx, ui, particles, projectiles, sound, assets }; world.player = player;
 const progress = new Progress(player, world, ui, saves), guide = new Guide(player, world, ui);
 const extras = new Extras(player, world, ui, progress), bosses = new Bosses(scene, world, ui, rig, player), settings = new Settings({ camera, rig, fx, world, sound, ui, renderer });
 const castle = new Castle(player, world, ui), classes = new ClassSelect(player, ui, guide, saves);
+assets.init(); // optional GLB models (assets/manifest.json); procedural models remain the fallback
 let post = null; initPost(renderer, scene, camera).then(r => { post = r; }); // bloom/vignette/grain, loaded lazily
 let last = performance.now();
 renderer.setAnimationLoop(now => {
