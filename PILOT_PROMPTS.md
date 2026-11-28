@@ -1,6 +1,6 @@
 # Pilot batch: ready-to-paste prompts (player + Husk Soldier)
 
-These two need a real 3D generator. I cannot produce organic character meshes or rigs myself. (The sword is already done as a code-built GLB.)
+These need a real 3D generator; the model work belongs to the dedicated 3D AI. The Ashbrand Sword (`weapon:Ashbrand Sword`) is part of the pilot batch too: "worn arming sword, straight tapered blade about 0.9 m, brass crossguard, leather-wrapped grip, round pommel; origin at the grip, blade along +Z."
 Tool suggestions (NOT verified for current free limits or licenses, check before use): an image-to-3D or text-to-3D generator with a free tier or free demo (for example Hunyuan3D or TRELLIS demos), Blender for cleanup, Mixamo for free rigging and animation.
 
 ## Step A, optional: make a concept image first (many generators give better results from an image)

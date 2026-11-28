@@ -1,16 +1,35 @@
-# Ashen Realm (WIP)
-Original browser Souls-like built with Three.js (CDN, no build step).
+# Ashen Realm
+A browser dark-fantasy action RPG. Three.js 0.160.0 + vanilla ES modules, no build step, GitHub Pages compatible. Work in progress; never browser-tested by its author (see REVIEW_PACKET.md).
+
 ## Run
-    cd ashen-realm && python3 -m http.server 8000
-Open http://localhost:8000 and click the game to capture the mouse.
+Online: your GitHub Pages URL. Locally: `python3 -m http.server 8000` in this folder, then open http://localhost:8000 and click the game to capture the mouse.
+
 ## Controls
-T cast (hold to charge) · Z next spell slot · M memorize screen · WASD move · Shift sprint · Space roll/backstep · F jump · LMB light combo (air: plunge; on a parried enemy: riposte) · E hold/release charged heavy · RMB guard (raise just before a hit to parry) · Q lock-on · R switch target · C weapon skill · 1/2 prev/next weapon · at the anvil (3,5): X infuse, U upgrade
+| Key | Action | Key | Action |
+|---|---|---|---|
+| WASD / mouse | move / camera | Q / R | lock on / switch target |
+| Shift | sprint | 1 / 2 | previous / next owned weapon |
+| Space | roll (backstep if still) | C | weapon skill |
+| F | jump | T (hold) / Z / M | cast / next spell slot / manage spells |
+| Left click | light attack, combo, plunge (air), riposte | V / B | Crimson / Cerulean flask |
+| Right click | guard (just before a hit = parry) | G | rest at beacon / open chest / pull lever |
+| E (hold) | charged heavy | X / U | infuse / upgrade at the anvil |
+| Y | mount | N | full map |
+| P | save / load | H | help and lore | 
+| K | skip tutorial | Esc | pause + settings |
+| Enter | skip boss cinematic | F3 | performance overlay |
 
-## Saving
-Press **P** for 5 save slots (autosaves every minute and resumes your last slot on launch). Saves live in the browser's localStorage, so they stay on one device/browser. To move one: **Export** a code on one device, **Import** it on the other.
+## What is in it
+Hollow Keep (castle start) with a tutorial and the first boss, Orsolt, who drops the Kindling Stone that unlocks leveling. 8 starting classes. Weapons and spells are found (chests, bosses, enemy drops). 27 weapons, 27 spells, 6 regions, 9 enemy types, 9 bosses, flasks, motes, beacons, equip-load tiers, 5 save slots, weather, day/night, minimap and map, synthesized audio, settings with post-processing, New Game+.
 
-## Play it online (GitHub Pages)
-No build step, so it hosts as-is:
-1. Create a GitHub repo (e.g. `ashen-realm`) and upload every file in this folder (index.html, *.js, README.md...).
-2. Repo **Settings → Pages → Build and deployment**: Source = *Deploy from a branch*, Branch = `main`, folder `/ (root)` → Save.
-3. After a minute it is live at `https://<your-username>.github.io/ashen-realm/`. Open that URL on any device with a keyboard and mouse.
+## Layout
+`main.js` wiring and loop | `player.js` | `combat.js` | `enemies.js` `bosses.js` | `magic.js` `items.js` `loot.js` `classes.js` | `progress.js` | `world.js` `regions.js` `castle.js` `extras.js` | `guide.js` `ui.js` `settings.js` `debug.js` | `save.js` `audio.js` | `models.js` (procedural models) `assets.js` `charmodel.js` (GLB pipeline) | `lore.js` (all story text) | `selftest.js`.
+
+## Story text
+All lore lives in `lore.js` (placeholder until the real lore is written). See `LORE_FOR_FRIEND.md`.
+
+## 3D models
+Procedural models are the fallback; GLB models plug in without code changes once listed in `assets/manifest.json`. Docs: `ASSET_PIPELINE.md` (architecture), `ASSET_SPEC.md` (requirements and prompts), `PILOT_PROMPTS.md` (first batch).
+
+## Testing
+Open `index.html?selftest` for a scripted in-browser test (classes, loot, save round trip, combat, enemy-wall collision, hotkey typing guard, asset loader, animation mapping, model fallback, all 9 bosses, performance probe). It does not write your saves. Press F3 for a live FPS/draw-call overlay.

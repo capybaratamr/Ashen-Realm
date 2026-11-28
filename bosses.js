@@ -8,6 +8,8 @@ import { ENDING } from './lore.js';
 import { RELICS } from './items.js';
 import { BOSS_LORE } from './lore.js';
 import { buildEnemy } from './models.js';
+import { ModelSlot } from './charmodel.js';
+import { pushOut, isTyping } from './util.js';
 import { Status, COLORS } from './combat.js';
 import { respawnAll } from './progress.js';
 const V = new THREE.Vector3(), T = new THREE.Vector3(), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
@@ -34,7 +36,7 @@ class Boss {
   constructor(scene, d, mgr) {
     Object.assign(this, { d, k: d, mgr, scene, name: d.name, isEnemy: true, isBoss: true, res: {}, poise: 160, maxPoise: 160, poiseT: 0, slow: 1, s: 'idle', t: 0, cd: 1, flash: 0, dead: 0, ph: 1, active: false, defeated: false, ringer: 0, still: 0, far: 0, sx: 0, sz: 0, q: [], tg: [], gt: 0, lt: 0, burn: 0, hpMult: 1, wantIntro: false, wph: 0, dd: new THREE.Vector3() });
     this.maxHp = this.hp = d.g === 'choir' ? d.pools[0] : d.hp; this.status = new Status(this); this.home = new THREE.Vector3(d.x, heightAt(d.x, d.z), d.z);
-    this.mat = new THREE.MeshStandardMaterial({ color: d.col }); const m = buildEnemy(d.look, this.mat); this.mesh = m.group; this.mesh.scale.setScalar(d.scale); this.arm = m.arm; this.legs = m.legs; this.mesh.position.copy(this.home); scene.add(this.mesh); this.pos = this.mesh.position;
+    this.mat = new THREE.MeshStandardMaterial({ color: d.col }); const m = buildEnemy(d.look, this.mat); this.mesh = m.group; this.mesh.scale.setScalar(d.scale); this.arm = m.arm; this.legs = m.legs; this.slot = new ModelSlot(this, 'boss:' + d.id, [m.body, ...m.legs]); this.mesh.position.copy(this.home); scene.add(this.mesh); this.pos = this.mesh.position;
     this.ring = new THREE.Mesh(new THREE.RingGeometry(d.r - .5, d.r, 56), new THREE.MeshBasicMaterial({ color: 0xff5a3a, transparent: true, opacity: .35, side: THREE.DoubleSide, depthTest: false })); this.ring.rotation.x = -Math.PI / 2; this.ring.position.set(d.x, this.home.y + .4, d.z); this.ring.visible = false; scene.add(this.ring);
   }
   get alive() { return this.hp > 0; }
@@ -103,7 +105,8 @@ class Boss {
   }
   update(dt, w) {
     const p = this.pw = w.player; this.ctx = w.ctx;
-    if (this.flash > 0) { this.flash -= dt; this.mat.emissive.setHex(0xffffff); } else this.mat.emissive.setHex(this.s === 'windup' ? 0x771100 : 0);
+    const fh = this.flash > 0 ? 0xffffff : this.s === 'windup' ? 0x771100 : 0; if (this.flash > 0) this.flash -= dt; this.mat.emissive.setHex(fh); this.slot.flash(fh);
+    this.slot.poll(this.ctx.assets); if (this.slot.active) { this.slot.update(dt); if (!this.active && !this.defeated) this.slot.play('idle'); }
     if (this.defeated) return;
     const ax = p.pos.x - this.d.x, az = p.pos.z - this.d.z, ar = Math.hypot(ax, az) || 1;
     if (!this.active) {
@@ -134,7 +137,8 @@ class Boss {
       case 'stagger': if (this.t > 2) this.set('choose'); break;
       case 'parried': if (this.t > 2.5) this.set('choose'); break;
     }
-    this.pos.y = heightAt(this.pos.x, this.pos.z); this.wph += dt * (moving ? 8 : 0); this.legs[0].rotation.x = Math.sin(this.wph) * .6; this.legs[1].rotation.x = -Math.sin(this.wph) * .6;
+    pushOut(this.pos, w.colliders, 1); this.pos.y = heightAt(this.pos.x, this.pos.z); this.wph += dt * (moving ? 8 : 0); this.legs[0].rotation.x = Math.sin(this.wph) * .6; this.legs[1].rotation.x = -Math.sin(this.wph) * .6;
+    if (this.slot.active) { const c = { windup: 'windup', recover: 'recover', roar: 'roar', stagger: 'stagger', parried: 'stagger', dash: 'walk' }[this.s] || (moving ? 'walk' : 'idle'); if (!this.slot.play(c, { once: c !== 'walk' && c !== 'idle' })) this.slot.play(moving ? 'walk' : 'idle'); }
     this.arm.rotation.x = this.s === 'windup' || this.s === 'roar' ? -2 : this.s === 'recover' ? .6 : -.3;
   }
 }
@@ -154,7 +158,7 @@ export class Bosses {
     this.msg = mk('left:0;right:0;top:35%;text-align:center;font-size:34px;letter-spacing:3px;text-shadow:0 0 10px #000;opacity:0;transition:opacity .6s;z-index:6');
     this.over = mk('inset:0;background:#05070cf2;display:none;padding:12%;text-align:center;font-size:20px;line-height:1.7;z-index:11'); this.over.style.pointerEvents = 'auto';
     this.over.onclick = e => { if (e.target.tagName === 'BUTTON') this.ng(); };
-    addEventListener('keydown', e => { if (e.code === 'Enter') this.skip = true; });
+    addEventListener('keydown', e => { if (e.code === 'Enter' && !isTyping(e)) this.skip = true; });
   }
   say(t) { if (t === this.lt && performance.now() - this.ltt < 3000) return; this.lt = t; this.ltt = performance.now(); this.msg.textContent = t; this.msg.style.opacity = 1; clearTimeout(this.mt); this.mt = setTimeout(() => this.msg.style.opacity = 0, 2400); }
   shoot(src, pos, dir, hit, speed) { const q = this.pool.find(o => o.life <= 0); if (!q) return; q.life = 2.5; q.m.position.copy(pos); q.vel.copy(dir).multiplyScalar(speed); q.src = src; q.hit = hit; q.m.material.color.setHex(COLORS[hit.type] || 0xff6a40); q.m.visible = true; }

@@ -1,7 +1,4 @@
-# Models folder
-Put `.glb` files in `assets/models/` and list them in `assets/manifest.json`, for example:
-
-    { "models": { "player": "assets/models/player.glb", "enemy:Husk Soldier": "assets/models/husk_soldier.glb" } }
-
-Key names: `player`, `enemy:<kind>`, `boss:<id>`, `weapon:<name>`, `prop:<name>`. See ../ASSET_SPEC.md for the exact requirements.
-Nothing in the game reads these yet except the loader (`assets.js`); each model type gets wired in and tested when its first real GLB exists.
+# Assets folder
+- `models/`: production GLB files (empty until the 3D AI delivers). List each one in `manifest.json`.
+- `dev/test_sword.glb`: a code-built loader test fixture used only by `?selftest`. Not part of the game.
+- `manifest.json`: version 2 manifest. See ../ASSET_PIPELINE.md for the format and ../ASSET_SPEC.md for model requirements.

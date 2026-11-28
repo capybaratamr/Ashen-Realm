@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { REGIONS, regionAt } from './regions.js';
 import { heightAt } from './world.js';
 import { RELICS } from './items.js';
+import { isTyping } from './util.js';
 export const ARMOR = [
   { n: 'Bare Skin', w: 0, def: 0, poise: 0, col: 0x9a7a60 }, { n: "Wanderer's Rags", w: 2, def: .03, poise: 0, col: 0x6a5a48 }, { n: 'Warden Leathers', w: 7, def: .12, poise: 6, col: 0x7a5a3a },
   { n: 'Gilt Mail', w: 14, def: .22, poise: 16, col: 0xb8a060 }, { n: 'Cinderplate', w: 24, def: .32, poise: 30, col: 0x5a3a3a }, { n: 'Colossus Harness', w: 38, def: .42, poise: 50, col: 0x4a5058 }
@@ -35,7 +36,7 @@ export class Progress {
     this.el = document.createElement('div'); this.el.style.cssText = css + 'inset:6% 12%;background:#0d1018f2;border:1px solid #ffffff33;padding:18px;display:none;overflow:auto';
     this.hint = document.createElement('div'); this.hint.style.cssText = css + 'left:50%;bottom:200px;transform:translateX(-50%);font-size:20px;text-shadow:0 0 6px #000;display:none;pointer-events:none';
     document.body.append(this.el, this.hint); this.el.onclick = e => this.click(e);
-    addEventListener('keydown', e => { if (e.code !== 'KeyG') return; if (this.open) this.close(); else if (this.near && !p.dead && !ui.menu) this.rest(this.near); });
+    addEventListener('keydown', e => { if (e.code !== 'KeyG' || isTyping(e)) return; if (this.open) this.close(); else if (this.near && !p.dead && !ui.menu) this.rest(this.near); });
   }
   rest(b) { const p = this.p; p.hp = p.maxHp; p.fp = p.maxFp; p.stam = p.maxStam; p.flask = p.flaskMax.slice(); p.status.reset(); p.spawn.set(b.x, b.y, b.z + 2); if (!p.litBeacons.includes(b.name)) p.litBeacons.push(b.name); respawnAll(this.w); this.open = true; this.ui.menu = true; document.exitPointerLock(); this.el.style.display = 'block'; this.render(); }
   close() { this.open = false; this.ui.menu = false; this.el.style.display = 'none'; this.saves.save(this.saves.slot, true); }

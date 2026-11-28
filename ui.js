@@ -1,6 +1,7 @@
 // HUD: bars, status meters, weapon infusion, target health bar, lock-on reticle, floating damage numbers, death banner.
 import * as THREE from 'three';
 import { COLORS } from './combat.js';
+import { isTyping } from './util.js';
 import { SPELLS, SPELL_BY_ID } from './magic.js';
 export function createUI(camera) {
   const $ = id => document.getElementById(id), hp = $('hp').firstChild, st = $('st').firstChild, ret = $('reticle'), msg = $('msg'), tbar = $('tbar'), th = $('th').firstChild;
@@ -21,7 +22,7 @@ export function createUI(camera) {
     bind(pl) { // memorize/equip screen: M toggles; click a slot, then a spell
       const m = $('menu'), render = () => { m.innerHTML = '<h2>Memorize Spells</h2><div>' + pl.slots.map((id, i) => `<button data-s="${i}" class="${i === pl.slot ? 'sel' : ''}">${i + 1}: ${id ? SPELL_BY_ID[id].n : '—'}</button>`).join('') + '</div><div class="grid">' + SPELLS.filter(s => pl.ownS.includes(s.id)).map(s => `<button data-sp="${s.id}">${s.n}<br><small>${s.sch === 'sorc' ? 'Sorcery' : 'Incantation'} · ${s.fp} FP · ${s.kind}</small></button>`).join('') + '</div><p>M to close · click a slot, then a spell to memorize it</p>'; };
       m.onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.s !== undefined) pl.slot = +b.dataset.s; if (b.dataset.sp) pl.slots[pl.slot] = b.dataset.sp; render(); };
-      addEventListener('keydown', e => { if (e.code === 'KeyM') { api.menu = !api.menu; m.style.display = api.menu ? 'block' : 'none'; if (api.menu) { document.exitPointerLock(); render(); } } });
+      addEventListener('keydown', e => { if (isTyping(e)) return; if (e.code === 'KeyM') { api.menu = !api.menu; m.style.display = api.menu ? 'block' : 'none'; if (api.menu) { document.exitPointerLock(); render(); } } });
     }
   };
   return api;

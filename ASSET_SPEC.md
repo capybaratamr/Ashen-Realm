@@ -61,5 +61,4 @@ Pose line for characters: "Full body, A-pose, arms slightly away from the body, 
 For each asset send: the GLB, a one-line note of intended height in meters, the clip list, and any non-standard bone names. Put the file in `assets/models/` and add it to `assets/manifest.json` (see assets/README.md).
 
 ## Pilot status
-- `weapon:Ashbrand Sword`: a code-built placeholder GLB exists (assets/models/ashbrand_sword.glb). It tests the pipeline; the 3D AI may replace it.
-- `player` and `enemy:Husk Soldier`: still need the 3D AI (see PILOT_PROMPTS.md).
+No production model exists. A code-built test sword is kept only as a loader test fixture (`assets/dev/test_sword.glb`, not listed in the manifest, not used in the game). All three pilot assets (`player`, `enemy:Husk Soldier`, `weapon:Ashbrand Sword`) need the 3D AI. Manifest format and clip-name overrides: see ASSET_PIPELINE.md.

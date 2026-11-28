@@ -1,6 +1,7 @@
 // Onboarding + world feedback: lore intro, step-by-step tutorial, objective, region banners, day/night, HUD info panel, minimap, help (H).
 import * as THREE from 'three';
 import { REGIONS, regionAt } from './regions.js';
+import { isTyping } from './util.js';
 import { INTRO as LORE } from './lore.js'; // story text lives in lore.js
 const CONTROLS = 'WASD move · Mouse camera · Shift sprint · Space roll/backstep · F jump\nLeft click attack/combo · E hold = charged heavy · Right click guard (raise just before a hit to parry, then left click = riposte)\nQ lock-on · R switch target · 1/2 weapon · C weapon skill\nT cast spell (hold for some) · Z next spell · M memorize spells\nV Crimson flask (heal) · B Cerulean flask (FP) · G rest at a beacon (armor, flasks, fast travel)\nY mount/dismount · N full map · G open chests / pull levers (hit suspicious walls) · P save/load · H help · K skip tutorial · Esc pause/settings';
 const STEPS = [
@@ -26,7 +27,7 @@ export class Guide {
     this.map = mk('right:18px;bottom:18px;border:1px solid #ffffff44;background:#0008', 'canvas'); this.map.width = this.map.height = 150;
     this.over = mk('inset:0;background:#05070cf2;display:none;overflow:auto;padding:5% 12%;font-size:17px;line-height:1.6'); Object.assign(this.over.style, { pointerEvents: 'auto', zIndex: 8 });
     addEventListener('keydown', e => {
-      if ((e.code === 'Enter' || e.code === 'KeyH') && this.open) this.hide(); else if (e.code === 'KeyH' && !ui.menu) this.show(false); else if (e.code === 'KeyK') p.tut = STEPS.length;
+      if (isTyping(e)) return; if ((e.code === 'Enter' || e.code === 'KeyH') && this.open) this.hide(); else if (e.code === 'KeyH' && !ui.menu) this.show(false); else if (e.code === 'KeyK') p.tut = STEPS.length;
     });
     let seenIntro = false; try { seenIntro = localStorage.getItem('ashenrealm.intro'); } catch { } if (!seenIntro) this.show(true);
   }

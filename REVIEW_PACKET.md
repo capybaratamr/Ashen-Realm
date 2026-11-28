@@ -1,34 +1,33 @@
-# Ashen Realm: review packet for the Technical Director (ChatGPT)
+# Ashen Realm: review packet for the Technical Director (round 2)
 
 ## Scope and state
-Browser dark-fantasy action RPG, Three.js 0.160.0 (CDN, ES modules, no build step), GitHub Pages compatible. ~1368 lines across the JS modules in this folder.
-Built so far: movement/camera/lock-on, combat (parry, riposte, poise, damage types, status buildup), 27 weapons, 27 spells, saves (5 slots), flasks/motes/beacons/armor + equip load, 6 regions, 9 enemy types, 9 bosses (cinematic intros, phases, mechanics), castle start (Hollow Keep), 8 starting classes with item discovery, Kindling Stone leveling gate, weather/day-night/minimap/full map, synthesized audio, settings + post-processing, centralized asset loader (loader only).
+Three.js 0.160.0 dark-fantasy action RPG, vanilla ES modules, no build step, GitHub Pages compatible. 26 modules, ~1588 lines. Feature scope: 6 regions, 9 enemy types, 9 bosses, 27 weapons, 27 spells, 8 classes, castle start, item discovery, saves, audio, settings. Phase 9 (towns, trading, quests) is NOT started. Lore is placeholder (lore.js unchanged this round).
 
-## Architecture (where to look)
-main.js (loop, wiring) | player.js (Player + CameraRig, state machine) | combat.js (applyHit, Status, Particles, Projectiles) | enemies.js | bosses.js | magic.js | items.js (weapons, infusions, skills, relics) | loot.js (ownership, drops) | classes.js | progress.js (motes, flasks, beacons, equip load) | regions.js / world.js / castle.js / extras.js (world) | guide.js (tutorial, HUD, minimap) | settings.js | save.js | audio.js | models.js (procedural models) | assets.js (GLB loader) | lore.js (all story text, editable by a non-programmer).
-Conventions: a shared ctx object ({fx, ui, particles, projectiles, sound, assets}) hangs off world.ctx; input uses a per-frame pressed{} map; most patches were applied by script, so some functions are long single lines.
+## Your 8 findings and what was done
+1. Primitive models -> still the fallback; the GLB path now exists (ModelSlot) but no model has been generated, so nothing has replaced a primitive yet.
+2. No central asset pipeline -> assets.js v2 + ASSET_PIPELINE.md.
+3. Procedural fallbacks must remain -> yes, untouched; ModelSlot restores them on any failure.
+4. Caching, error handling, animation, optimization -> implemented (cache + de-dupe, timeout/retry, validation budgets, AnimatedModel, shared geometry, distant-enemy sleep). Draco, instancing, LOD, lazy loading: not done.
+5. Never browser-tested -> still true. Added index.html?selftest (scripted scenarios) and an F3 overlay so a real test pass is one click. I have NOT run them.
+6. Phase 9 unfinished -> acknowledged, not started.
+7. Lore placeholders preserved -> lore.js untouched.
+8. Docs -> README, ASSET_PIPELINE, ASSET_SPEC, PILOT_PROMPTS, TODO, CHANGELOG refreshed.
 
-## What has actually been verified
-- Every .js file passes node --check (syntax).
-- Every named import resolves to a matching export (scripted check).
-- Class starting kits and boss drops reference weapons/spells that exist (scripted check).
-## What has NOT been verified
-- The game has never been run in a browser by me. Nothing about gameplay, rendering, audio, or performance is confirmed.
-- No automated tests exist.
+## Architecture verified by inspection (script)
+Import graph resolves. Cycles exist: world -> enemies -> world, and world -> enemies -> loot -> magic -> world. They work because cross-module values are only used inside functions, never at module load. Please judge whether they should be broken. main.js now exposes step() and window.__ashen. A hidden-collision catch: Player already used `slot` for the spell index, so the model binding is named `glb`.
 
-## Known bugs and limitations
-1. Two of my scripted edits produced syntax errors (a // comment swallowed a closing brace). They were caught by the syntax check, but similar logic slips could exist where no syntax error results. Please review long one-line methods in player.js and bosses.js.
-2. Enemies and bosses do not collide with walls or props; an enemy outside the castle can walk through the wall. Boss arenas only clamp the player.
-3. Melee hits are an instant arc test on the active frame, not a swept volume (the original brief asked for swept hitboxes).
-4. Performance is unprofiled: ~45 enemies of ~12-15 meshes each, ~300 prop meshes, 36 wall boxes, 900 weather/particle points, optional bloom pass. No instancing or LOD yet.
-5. Pause menu opens on pointer-lock loss; this heuristic may misfire.
-6. Old saves have no class and are reset to the class kit on first load.
-7. Phase 8 unfinished: title screen, key rebinding, gamepad, lore codex screen, animation polish. Quests/trading/marketplaces (Phase 9) not started; 8 items are reserved in loot.js for quest rewards.
-8. Models: every character is still built from Three.js primitives (fallback). One code-built GLB exists (assets/models/ashbrand_sword.glb, a placeholder-quality sword, not AI-generated) and Player.syncWeaponModel() swaps it in for the Ashbrand Sword when it loads. The GLB itself passes a structural check (scripted re-parse); loading and rendering in the browser are UNTESTED. No rigged/animated GLB exists yet.
-9. Balance is untuned (boss HP/damage, drop rates, motes costs).
-10. lore.js was accidentally overwritten once and rebuilt from the friend's guide; the original placeholder wording was lost.
+## Bugs found and fixed this round
+Typing in text fields triggered hotkeys; enemies/bosses ignored walls and props; pack-alert aggro never expired; all enemies updated every frame regardless of distance; quality change did not resize the composer; missing favicon (console 404); a latent temporal-dead-zone risk on `post` in the resize handler.
+
+## Verified (by me, in a sandbox without a browser)
+Syntax of every module; every named import resolves to an export; class/boss-drop data matches the item lists; GLB test fixture structure (re-parsed independently). 
+## NOT verified
+Everything else: rendering, gameplay, audio, combat feel, boss fights, performance, the self-test itself (written but never executed), GLB loading in a real browser, skinned-model playback, hand-socket alignment.
+
+## Known limitations
+Melee uses an instant arc test, not swept hitboxes. Enemies have no pathfinding (they slide along obstacles). Performance unprofiled. The pause menu opens on pointer-lock loss (heuristic). Pointer-lock, audio autoplay and post-processing dynamic imports can fail silently on some browsers. Balance is untuned. The two CommonJS-style hazards I hit earlier (a // comment swallowing a closing brace) were caught only by syntax checks; please review long one-line methods in player.js and bosses.js.
 
 ## Questions for review
-- Is the state-machine + procedural-animation approach in player.js a good base for switching to skeletal GLB clips, or should animation be restructured first?
-- Which of the performance risks in item 4 should be fixed before models arrive?
-- Any spec items from the original brief that are missing or only half-met?
+- Are the module cycles acceptable or should a registry/service object replace direct imports?
+- Is per-instance material cloning (for hit flash) acceptable for ~45 skinned enemies, or should flash use a shader uniform / outline pass?
+- Is the logical-clip + ModelSlot design the right seam for skeletal characters, given procedural animation currently drives arm/legs?

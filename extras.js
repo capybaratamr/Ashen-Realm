@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { REGIONS, regionAt } from './regions.js';
 import { heightAt } from './world.js';
+import { isTyping } from './util.js';
 import { chestItem } from './loot.js';
 const UP = new THREE.Vector3(0, 2, 0);
 export class Extras {
@@ -30,6 +31,7 @@ export class Extras {
     this.hint = document.createElement('div'); this.hint.style.cssText = css + 'left:50%;bottom:240px;transform:translateX(-50%);font-size:20px;text-shadow:0 0 6px #000;display:none;pointer-events:none';
     this.mapc = document.createElement('canvas'); this.mapc.width = this.mapc.height = 560; this.mapc.style.cssText = css + 'left:50%;top:50%;transform:translate(-50%,-50%);border:1px solid #fff4;display:none;z-index:9'; document.body.append(this.hint, this.mapc);
     addEventListener('keydown', e => {
+      if (isTyping(e)) return;
       if (e.code === 'KeyY' && p.state === 'free' && !ui.menu && !p.dead && !w.bossActive) p.mounted = !p.mounted;
       else if (e.code === 'KeyN') { if (this.mapOpen) this.map(false); else if (!ui.menu) this.map(true); }
       else if (e.code === 'KeyG' && !ui.menu && !prog.near && this.near) this.use(this.near);

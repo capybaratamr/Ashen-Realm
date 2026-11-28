@@ -35,3 +35,10 @@
 - Leveling is locked until you defeat Orsolt, who drops the Kindling Stone; then beacons show the level-up menu
 - 8 starting classes (classes.js) with their own stats, armor, weapons and spells; class select appears on a new game and for old saves
 - You only own your class kit. Weapons and spells are found: chests (every chest has an item), boss drops (guaranteed), enemy drops (4% normal / 15% strong), duplicates become motes; a few items are reserved for Phase 9 quest rewards
+## Asset pipeline v2, test tooling, bug fixes (technical-director review round 1)
+- assets.js rewritten: manifest v2, cache + in-flight de-duplication, timeout + retry, validation against polygon/texture budgets, contained errors, instance cloning with shared geometry, AnimatedModel (logical clip names, aliases, cross-fades, graceful missing clips)
+- charmodel.js (ModelSlot): optional GLB binding for Player, Enemy and Boss with per-instance materials for hit-flash, procedural fallback, and failure recovery; weapon follows the right-hand bone for GLB characters
+- main.js restructured around step() (one simulation frame) and exposes window.__ashen; ?selftest runs selftest.js; F3 shows the debug overlay (debug.js)
+- The code-built test sword is now only a dev fixture (assets/dev/test_sword.glb); the manifest is empty, so no model is used in play
+- Fixes: hotkeys no longer fire while typing in text fields; enemies and bosses collide with walls and props; pack-alert aggro expires; distant idle enemies sleep and are hidden; changing graphics quality resizes the composer; favicon added (removes a console 404); `resize` handler no longer touches `post` before it is declared
+- Docs refreshed: README, ASSET_PIPELINE, ASSET_SPEC, PILOT_PROMPTS, REVIEW_PACKET, TODO. lore.js was not modified.

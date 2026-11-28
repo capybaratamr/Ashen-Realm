@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import { heightAt } from './world.js';
 import { Status } from './combat.js';
 import { buildEnemy } from './models.js';
+import { ModelSlot } from './charmodel.js';
+import { pushOut } from './util.js';
 import { rollDrop } from './loot.js';
 const V = new THREE.Vector3(), wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 const KINDS = {
@@ -21,7 +23,7 @@ export class Enemy {
     const k = this.k = KINDS[name]; this.name = name; this.isEnemy = true; this.res = k.res;
     this.maxHp = this.hp = k.hp; this.maxPoise = this.poise = k.poise; this.poiseT = 0; this.slow = 1; this.status = new Status(this);
     this.home = new THREE.Vector3(x, heightAt(x, z), z); this.s = 'idle'; this.t = 0; this.cd = 1; this.flash = 0; this.dead = 0; this.speed = k.spd || 3.2; this.aggro = 16;
-    this.mat = new THREE.MeshStandardMaterial({ color: k.col }); const m = buildEnemy(name, this.mat); this.mesh = m.group; this.arm = m.arm; this.legs = m.legs; this.ph = 0; this.mesh.position.copy(this.home); scene.add(this.mesh); this.pos = this.mesh.position;
+    this.mat = new THREE.MeshStandardMaterial({ color: k.col }); const m = buildEnemy(name, this.mat); this.mesh = m.group; this.arm = m.arm; this.legs = m.legs; this.ph = 0; this.slot = new ModelSlot(this, 'enemy:' + name, [m.body, ...m.legs]); this.mesh.position.copy(this.home); scene.add(this.mesh); this.pos = this.mesh.position;
   }
   get alive() { return this.hp > 0; }
   set(s) { this.s = s; this.t = 0; }
@@ -30,7 +32,7 @@ export class Enemy {
   statusHurt(n, c) { if (!this.alive) return; this.takeDamage(n); this.ctx.ui.damage(this.pos.clone().add(new THREE.Vector3(0, 2.2, 0)), n, '#' + c.toString(16).padStart(6, '0')); }
   update(dt, w) {
     this.ctx = w.ctx; const p = this.pw = w.player;
-    if (this.flash > 0) { this.flash -= dt; this.mat.emissive.setHex(0xffffff); } else this.mat.emissive.setHex(this.s === 'windup' ? 0x661100 : 0);
+    const fh = this.flash > 0 ? 0xffffff : this.s === 'windup' ? 0x661100 : 0; if (this.flash > 0) this.flash -= dt; this.mat.emissive.setHex(fh); this.slot.flash(fh);
     if (!this.alive) { // respawn after a delay
       if ((this.dead -= dt) <= 0) { this.hp = this.maxHp; this.poise = this.maxPoise; this.mesh.visible = true; this.pos.copy(this.home); this.status.reset(); this.set('idle'); }
       return;
@@ -38,7 +40,7 @@ export class Enemy {
     this.status.update(dt); dt *= this.slow; // frost slows the whole AI
     if ((this.poiseT -= dt) <= 0) this.poise = Math.min(this.maxPoise, this.poise + 12 * dt);
     this.cd -= dt; this.t += dt;
-    const d = V.subVectors(p.pos, this.pos); d.y = 0; const dist = d.length();
+    const d = V.subVectors(p.pos, this.pos); d.y = 0; const dist = d.length(); if (this.aggro > 16 && dist > 60) this.aggro = 16; // pack-alert aggro expires once the player is far away
     const face = () => { this.mesh.rotation.y += wrap(Math.atan2(d.x, d.z) - this.mesh.rotation.y) * Math.min(1, dt * 8); };
     switch (this.s) {
       case 'idle': case 'chase':
@@ -57,8 +59,10 @@ export class Enemy {
       case 'stagger': if (this.t > 1.2) this.set('chase'); break;
       case 'parried': if (this.t > 2.5) this.set('chase'); break; // riposte window
     }
+    pushOut(this.pos, w.colliders, .5); // enemies respect walls and props
     this.pos.y = heightAt(this.pos.x, this.pos.z);
     this.ph += dt * (this.s === 'chase' ? 9 : 0); this.legs[0].rotation.x = Math.sin(this.ph) * .7; this.legs[1].rotation.x = -Math.sin(this.ph) * .7; // walk cycle
+    this.slot.poll(this.ctx.assets); if (this.slot.active) { this.slot.update(dt); const c = { windup: 'windup', strike: 'strike', recover: 'recover', stagger: 'stagger', parried: 'stagger', chase: 'walk' }[this.s] || 'idle'; if (!this.slot.play(c, { once: c !== 'walk' && c !== 'idle' })) this.slot.play('idle'); }
     this.arm.rotation.x = this.s === 'windup' ? -2 : this.s === 'strike' ? .6 : -.3;
   }
 }

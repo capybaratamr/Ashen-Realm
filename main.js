@@ -1,4 +1,4 @@
-// Entry: renderer, main loop, hit-stop. Shared context {fx, ui, particles} is attached to the world for all systems.
+// Entry: renderer, wiring, main loop. step() is ONE simulation frame; the loop and the self-test (?selftest) both call it.
 import * as THREE from 'three';
 import { buildWorld } from './world.js';
 import { Player, CameraRig } from './player.js';
@@ -13,8 +13,10 @@ import { Bosses } from './bosses.js';
 import { Castle } from './castle.js';
 import { ClassSelect } from './classes.js';
 import { Assets } from './assets.js';
+import { Debug } from './debug.js';
 import { Settings, initPost } from './settings.js';
 import { createUI } from './ui.js';
+let post = null; // bloom/vignette/grain composer, loaded lazily (declared first: the resize handler can fire during setup)
 const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight); document.body.appendChild(renderer.domElement);
 const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, .1, 400);
@@ -26,13 +28,20 @@ const progress = new Progress(player, world, ui, saves), guide = new Guide(playe
 const extras = new Extras(player, world, ui, progress), bosses = new Bosses(scene, world, ui, rig, player), settings = new Settings({ camera, rig, fx, world, sound, ui, renderer });
 const castle = new Castle(player, world, ui), classes = new ClassSelect(player, ui, guide, saves);
 assets.init(); // optional GLB models (assets/manifest.json); procedural models remain the fallback
-let post = null; initPost(renderer, scene, camera).then(r => { post = r; }); // bloom/vignette/grain, loaded lazily
-let last = performance.now();
-renderer.setAnimationLoop(now => {
-  let dt = Math.min(.05, (now - last) / 1000); last = now;
+initPost(renderer, scene, camera).then(r => { post = r; });
+const debug = new Debug(renderer, world, assets);
+function step(dt) { // one simulation frame
   if (fx.hitstop > 0) { fx.hitstop -= dt; dt *= .05; } // hit-stop: near-freeze for a few frames
-  if (ui.menu) dt = 0; // memorize screen pauses the world
+  if (ui.menu) dt = 0; // any open menu pauses the world
   player.update(dt, rig, world, ui, fx); world.update(dt); particles.update(dt); projectiles.update(dt, world); updateMagic(dt, world); saves.tick(dt); progress.update(dt); guide.update(dt, rig); extras.update(dt); bosses.update(dt); castle.update(dt); classes.update(); rig.update(dt, player, fx);
   ui.update(player, rig.target);
+}
+const game = { THREE, renderer, scene, camera, world, player, rig, ui, fx, particles, projectiles, sound, assets, saves, progress, guide, extras, bosses, castle, classes, settings, debug, step };
+window.__ashen = game; // debugging handle
+let last = performance.now();
+renderer.setAnimationLoop(now => {
+  const dt = Math.min(.05, (now - last) / 1000); last = now; step(dt);
   if (post && settings.s.quality === 'high') { post.fin.uniforms.time.value = (now * .001) % 100; post.c.render(); } else renderer.render(scene, camera);
+  debug.update(dt);
 });
+if (new URLSearchParams(location.search).has('selftest')) import('./selftest.js').then(m => m.runSelfTest(game)).catch(e => console.error('[selftest] could not start', e));

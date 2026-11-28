@@ -4,6 +4,7 @@ import { heightAt, BOUND } from './world.js';
 import { Status, applyHit, COLORS } from './combat.js';
 import { SPELL_BY_ID, castSpell } from './magic.js';
 import { buildKnight } from './models.js';
+import { ModelSlot } from './charmodel.js';
 import { respawnAll, dropMotes } from './progress.js';
 import { WEAPONS, INFUSIONS, SKILLS, STAT0, weaponDamage } from './items.js';
 const K = {}, pressed = {};
@@ -56,14 +57,33 @@ export class Player {
     this.status = new Status(this); this.stats = { ...STAT0 }; this.wi = 0; this.wlvl = 0; this.inf = 0; this.fp = this.maxFp = 50; this.buff = 0; this.ward = 0; this.nearSmith = false; this.slots = [null, null, null, null, null, null]; this.slot = 0; this.absorb = 0; this.absorbT = 0; this.dr = 0; this.drT = 0; this.regenT = 0; this.regenAmt = 0; this.poiseBuffT = 0; this.sp = null; this.cp = 0; this.chg = 0; this.level = 1; this.motes = 0; this.flask = [3, 2]; this.flaskMax = [3, 2]; this.armorIdx = 2; this.spawn = new THREE.Vector3(0, 0, 8); this.lost = null; this.litBeacons = []; this.discovered = ['hollow']; this.tut = 0; this.drinkK = 0; this.armorDef = 0; this.dmgMul = 1; this.spd = 1; this.rollMul = 1; this.regenMul = 1; this.noRoll = false; this.world = null; this.ph = 0; this.relics = []; this.bossesDown = []; this.ownW = []; this.ownS = []; this.cls = null; this.keyItems = []; this.ng = 0; this.opened = []; this.mounted = false; this.gmul = 1; this.relicDmg = 1; this.relicPoise = 0;
     this.state = 'free'; this.t = 0; this.combo = 0; this.mv = null; this.hitDone = false; this.queued = false; this.gcd = 0; this.charge = 0;
     this.iframes = false; this.onGround = true; this.plunge = false; this.dir = new THREE.Vector3(); this.dead = false;
-    const m = buildKnight(); this.mesh = m.group; this.body = m.body; this.arm = m.arm; this.blade = m.blade; this.shield = m.shield; this.legs = m.legs; this.cape = m.cape; this.torsoMat = m.torsoMat; scene.add(this.mesh);
+    const m = buildKnight(); this.mesh = m.group; this.body = m.body; this.arm = m.arm; this.blade = m.blade; this.shield = m.shield; this.legs = m.legs; this.cape = m.cape; this.torsoMat = m.torsoMat; scene.add(this.mesh); this.glb = new ModelSlot(this, 'player', [this.body, ...this.legs]); // NOTE: this.slot is the SPELL slot index
   }
   spend(n) { if (this.stam <= 0) return false; this.stam -= n; this.regen = .8; return true; }
   forward() { return new THREE.Vector3(Math.sin(this.face), 0, Math.cos(this.face)); }
-  syncWeaponModel() { // use a loaded GLB for the current weapon (key 'weapon:<name>'), otherwise the procedural blade
-    const a = this.ctx && this.ctx.assets, key = 'weapon:' + this.def.name, sig = key + (a && a.has(key));
-    if (this.wmSig !== sig) { this.wmSig = sig; if (this.wm) { this.arm.remove(this.wm); this.wm = null; } if (a && a.has(key)) { this.wm = a.instance(key).root; this.wm.position.set(0, -.6, .1); this.arm.add(this.wm); } }
-    this.blade.visible = !this.wm && this.def.cat !== 'shield';
+  weaponParent() { return this.handMount || this.arm; }
+  onModelAttached(slot) { // a GLB character was attached: the weapon moves to its right-hand bone (tunable via the manifest "hand": {pos, rot})
+    let bone = null; slot.root.traverse(o => { if (!bone && o.isBone && /righthand|hand[._-]?r$/i.test(o.name)) bone = o; });
+    if (bone) { const h = slot.entry.hand || {}; this.handMount = new THREE.Group(); this.handMount.position.set(...(h.pos || [0, 0, 0])); this.handMount.rotation.set(...(h.rot || [0, 0, 0])); bone.add(this.handMount); }
+    else console.warn('[models] player GLB has no right-hand bone; the weapon will be hidden'); this.wmSig = null;
+  }
+  syncWeaponModel() { // GLB weapon if loaded (key 'weapon:<name>'), else the procedural blade
+    const a = this.ctx && this.ctx.assets, key = 'weapon:' + this.def.name, sig = key + (a && a.has(key)) + (this.handMount ? 'h' : '');
+    if (this.wmSig !== sig) {
+      this.wmSig = sig; if (this.wm) { if (this.wm.parent) this.wm.parent.remove(this.wm); this.wm = null; }
+      const par = this.weaponParent(), y = this.handMount ? 0 : -.6; if (this.blade.parent !== par) { par.add(this.blade); this.blade.position.set(0, y, .75); }
+      if (a && a.has(key)) { this.wm = a.instance(key).root; this.wm.position.set(0, y, .1); par.add(this.wm); }
+    }
+    const hidden = this.glb.active && !this.handMount; this.blade.visible = !this.wm && this.def.cat !== 'shield' && !hidden; if (this.wm) this.wm.visible = !hidden;
+  }
+  driveModel(dt) { // GLB character animation from the state machine (inert without a model)
+    const s = this.glb; s.poll(this.ctx.assets); if (!s.active) return; s.update(dt);
+    const st = this.state, sp = this.onGround ? Math.hypot(this.vel.x, this.vel.z) : 0; let c, o = {};
+    if (this.dead) { c = 'die'; o.once = true; } else if (st === 'roll') { c = 'roll'; o.once = true; } else if (st === 'back') { c = 'backstep'; o.once = true; }
+    else if (st === 'attack') { c = this.mv && this.mv.rip ? 'riposte' : this.mv && this.mv.light ? 'attack' + (this.combo + 1) : 'heavy'; o.once = true; }
+    else if (st === 'charge') c = 'charge'; else if (st === 'guard') c = 'guard'; else if (st === 'cast') { c = 'cast'; o.once = true; } else if (st === 'drink') { c = 'drink'; o.once = true; } else if (st === 'stagger') { c = 'stagger'; o.once = true; }
+    else if (!this.onGround) c = this.vel.y > 0 ? 'jump' : 'fall'; else c = sp > 5.5 ? 'run' : sp > .5 ? 'walk' : 'idle';
+    if (!s.play(c, o)) s.play('idle');
   }
   snd(k) { const s = this.ctx && this.ctx.sound; if (s) s.sfx(k); }
   startDrink(k) { // flasks: V = Crimson (HP), B = Cerulean (FP). The charge is spent only when the drink finishes; a hit or a roll cancels it.
@@ -240,7 +260,7 @@ export class Player {
     } else if (this.pos.y > gh + .05) this.onGround = false;
     if (this.pos.y < -40) this.takeDamage(999);
     if (!sprinting && this.regen <= 0 && ['free', 'roll', 'back'].includes(this.state)) this.stam = Math.min(this.maxStam, this.stam + 28 * dt * this.slow * this.regenMul);
-    this.regen -= dt; this.syncWeaponModel(); this.walk(dt); this.mesh.position.copy(this.pos); this.mesh.rotation.y = this.face;
+    this.regen -= dt; this.syncWeaponModel(); this.driveModel(dt); this.walk(dt); this.mesh.position.copy(this.pos); this.mesh.rotation.y = this.face;
     for (const k in pressed) delete pressed[k];
   }
 }

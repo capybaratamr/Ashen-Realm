@@ -23,7 +23,7 @@ export class Settings {
   }
   apply() {
     const s = this.s; this.sound.setVol(s.vol); this.camera.fov = s.fov; this.camera.updateProjectionMatrix(); this.rig.sens = s.sens * .001; this.world.diff = s.diff; this.fx.shakeMul = s.shake; document.body.classList.toggle('cb', !!s.cb);
-    this.renderer.setPixelRatio(s.quality === 'high' ? Math.min(devicePixelRatio, 2) : 1); this.renderer.setSize(innerWidth, innerHeight); try { localStorage.setItem('ashenrealm.settings', JSON.stringify(s)); } catch { }
+    this.renderer.setPixelRatio(s.quality === 'high' ? Math.min(devicePixelRatio, 2) : 1); this.renderer.setSize(innerWidth, innerHeight); dispatchEvent(new Event('resize')); try { localStorage.setItem('ashenrealm.settings', JSON.stringify(s)); } catch { }
   }
   show() {
     const s = this.s, r = (k, mn, mx, st, label) => `<div>${label}: <input type="range" data-k="${k}" min="${mn}" max="${mx}" step="${st}" value="${s[k]}"> <b>${s[k]}</b></div>`;

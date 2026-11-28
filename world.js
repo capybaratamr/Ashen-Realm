@@ -39,5 +39,5 @@ export function buildWorld(scene) {
     R.enemies.forEach((k, j) => { for (let n = 0; n < (R.id === 'hollow' ? 1 : 2); n++) { const a = (n + j * .5) * 2.1, d = R.id === 'hollow' ? 22 : 18 + n * 7; const ex = R.cx + Math.cos(a) * d, ez = R.cz + Math.sin(a) * d; if (!ARENAS.some(q => Math.hypot(ex - q[0], ez - q[1]) < q[2] + 3)) enemies.push(new Enemy(scene, k, ex, ez)); } });
   }
   const anvil = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1, .8), new THREE.MeshStandardMaterial({ color: 0x333840 })); anvil.position.set(3, heightAt(3, 5) + .5, 5); scene.add(anvil); colliders.push({ x: 3, z: 5, r: .8 }); // smith
-  const world = { colliders, enemies, smith: { x: 3, z: 5 }, sun, hemi }; world.update = dt => enemies.forEach(e => e.update(dt, world)); return world;
+  const world = { colliders, enemies, smith: { x: 3, z: 5 }, sun, hemi }; world.update = dt => { const p = world.player; for (const e of enemies) { if (!p || e.isBoss) { e.update(dt, world); continue; } const far = Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) > 140; if (e.alive) e.mesh.visible = !far; if (far && e.s === 'idle') continue; e.update(dt, world); } }; // distant idle enemies sleep and are not drawn return world;
 }
